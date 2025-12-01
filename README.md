@@ -100,6 +100,7 @@ Available Categories:
   Agents:
     - oss-auditor.md
   Skills:
+    - makefile-skills-guide.md
     - oss-project-setup.md
 ```
 
@@ -252,6 +253,41 @@ After installation, invoke the agent in conversation to analyze any repository.
 
 ---
 
+#### 📚 makefile-skills-guide Skill
+**Purpose**: Comprehensive reference for Makefile build automation
+
+Production-proven patterns and best practices for creating Makefiles for multi-language projects, cross-platform builds, and development workflows.
+
+**Key Features**:
+- Full-stack integration (Go + npm/Node.js)
+- Cross-platform compilation (Linux, macOS, Windows)
+- Process management (start/stop/restart with PID tracking)
+- Testing integration (unit, E2E with Playwright)
+- Development workflows (hot reload, watch mode)
+- Self-documenting help system
+
+**Coverage**:
+- Basic and advanced Makefile concepts
+- Common production patterns
+- Full-stack build orchestration
+- Dependency management
+- Linting, formatting, and validation
+- Cross-platform compatibility
+- Debugging techniques
+
+**Use Cases**:
+- "Create a Makefile for my Go + React project"
+- "How do I manage background processes with Make?"
+- "Set up cross-platform builds"
+- "Integrate Playwright E2E tests into Make"
+
+**Installation**:
+```bash
+claude-code-foundry install development skills
+```
+
+---
+
 #### 📚 oss-project-setup Skill
 **Purpose**: Knowledge framework for open source project setup and growth
 
@@ -315,6 +351,7 @@ claude-code-foundry/
 │       ├── agents/
 │       │   └── oss-auditor.md
 │       └── skills/
+│           ├── makefile-skills-guide.md
 │           └── oss-project-setup.md
 ├── cmd/                     # CLI application code
 ├── pkg/                     # Core library packages
