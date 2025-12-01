@@ -529,7 +529,7 @@ make install
 ## Roadmap
 
 ### v1.0.0 (Current)
-- ✅ Core install/upgrade/remove functionality
+- ✅ Core install/remove functionality (install handles updates automatically)
 - ✅ Category-based organization
 - ✅ Transactional operations with rollback
 - ✅ Doctor command (experimental)
