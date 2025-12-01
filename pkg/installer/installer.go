@@ -79,15 +79,28 @@ func InstallFile(file embedpkg.CategoryFile, st *state.State) error {
 	installedFilename := GenerateInstalledFilename(file.Category, file.Filename)
 	installedPath := filepath.Join(typeDir, installedFilename)
 
+	// Format display path (replace home with ~)
+	displayPath := installedPath
+	if home, err := os.UserHomeDir(); err == nil {
+		displayPath = strings.Replace(installedPath, home, "~", 1)
+	}
+
+	// Determine type label (singular form)
+	typeLabel := strings.TrimSuffix(file.Type, "s") // "agents" -> "agent"
+
 	// Check if already installed
-	if existing := st.FindInstallation(installedPath); existing != nil {
+	existing := st.FindInstallation(installedPath)
+	isUpdate := false
+
+	if existing != nil {
 		// File already installed, check if content changed
 		if !existing.HasContentChanged(file.Content) {
-			fmt.Printf("  ✓ %s (already installed, unchanged)\n", installedFilename)
+			fmt.Printf("  ✓ %s: %s → %s (unchanged)\n", typeLabel, installedFilename, displayPath)
 			return nil
 		}
 
-		fmt.Printf("  ⚠ %s (already installed, will update)\n", installedFilename)
+		fmt.Printf("  ⚠ %s: %s → %s (updating)\n", typeLabel, installedFilename, displayPath)
+		isUpdate = true
 	}
 
 	// Write file
@@ -99,7 +112,12 @@ func InstallFile(file embedpkg.CategoryFile, st *state.State) error {
 	st.RemoveInstallation(installedPath) // Remove old entry if exists
 	st.AddInstallation(file.Category, file.Type, file.Filename, installedPath, file.Content)
 
-	fmt.Printf("  ✓ %s\n", installedFilename)
+	// Show success with type and path
+	if isUpdate {
+		fmt.Printf("  ✓ %s: %s → %s (updated)\n", typeLabel, installedFilename, displayPath)
+	} else {
+		fmt.Printf("  ✓ %s: %s → %s\n", typeLabel, installedFilename, displayPath)
+	}
 	return nil
 }
 
@@ -195,7 +213,16 @@ func RemoveInstallation(installation state.Installation) error {
 		return fmt.Errorf("failed to remove file %s: %w", installation.InstalledPath, err)
 	}
 
-	fmt.Printf("  ✓ Removed %s\n", filepath.Base(installation.InstalledPath))
+	// Format display path (replace home with ~)
+	displayPath := installation.InstalledPath
+	if home, err := os.UserHomeDir(); err == nil {
+		displayPath = strings.Replace(installation.InstalledPath, home, "~", 1)
+	}
+
+	// Determine type label (singular form)
+	typeLabel := strings.TrimSuffix(installation.Type, "s")
+
+	fmt.Printf("  ✓ %s: %s (removed from %s)\n", typeLabel, filepath.Base(installation.InstalledPath), displayPath)
 	return nil
 }
 
