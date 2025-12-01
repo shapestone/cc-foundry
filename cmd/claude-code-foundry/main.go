@@ -32,8 +32,6 @@ func main() {
 		handleInstall()
 	case "remove":
 		handleRemove()
-	case "upgrade":
-		handleUpgrade()
 	case "version", "--version", "-v":
 		fmt.Printf("claude-code-foundry v%s\n", version)
 	case "help", "--help", "-h":
@@ -53,9 +51,8 @@ Usage:
 
 Commands:
   list <target>              List available categories and their contents
-  install <target> [type]    Install files from categories
+  install <target> [type]    Install or update files from categories
   remove <target> [type]     Remove installed files
-  upgrade <target> [type]    Upgrade installed files
   version                    Show version information
   help                       Show this help message
 
@@ -63,7 +60,7 @@ List targets:
   list all                   Show all categories and their files
   list <category>            Show files in a specific category
 
-Install/Remove/Upgrade targets:
+Install/Remove targets:
   <command> all              All categories
   <command> <category>       Specific category
   <command> <category> <type>  Specific type (commands|agents|skills)
@@ -75,7 +72,10 @@ Examples:
   claude-code-foundry install development
   claude-code-foundry install development agents
   claude-code-foundry remove development skills
-  claude-code-foundry upgrade all
+
+Note:
+  The install command automatically updates existing files if they've changed.
+  Files that are already installed and unchanged will be skipped.
 
 Files are installed to:
   ~/.claudecode/commands/  (or ~/.config/claude/commands/ on Linux)
@@ -263,15 +263,3 @@ func handleRemove() {
 	}
 }
 
-func handleUpgrade() {
-	if len(os.Args) < 3 {
-		fmt.Fprintln(os.Stderr, "Error: upgrade command requires a target")
-		fmt.Fprintln(os.Stderr, "Usage: claude-code-foundry upgrade <all|category> [type]")
-		os.Exit(1)
-	}
-
-	// For now, upgrade is the same as install (it will update existing files)
-	// In the future, we could add diff showing and confirmation
-	fmt.Println("Upgrading files (this will update any changed files)...")
-	handleInstall()
-}

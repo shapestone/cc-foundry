@@ -128,25 +128,9 @@ Files are installed to:
 - `development/commands/deploy.md` → `~/.claudecode/commands/ccf-development-deploy.md`
 - `deployment/commands/deploy.md` → `~/.claudecode/commands/ccf-deployment-deploy.md`
 
-#### 3. Upgrade Files
+**Note**: The `install` command automatically updates existing files if they've changed. Files that are unchanged will be skipped. You can re-run `install` at any time to update to the latest versions.
 
-```bash
-# Upgrade everything installed by foundry
-claude-code-foundry upgrade all
-
-# Upgrade specific category
-claude-code-foundry upgrade development
-
-# Upgrade specific type
-claude-code-foundry upgrade development commands
-```
-
-The tool will:
-- Compare file hashes to detect changes
-- Prompt if you've modified files locally
-- Show diffs before overwriting
-
-#### 4. Remove Files
+#### 3. Remove Files
 
 ```bash
 # Remove everything foundry installed
@@ -161,7 +145,7 @@ claude-code-foundry remove development commands
 
 Only removes files that foundry installed (tracked in state file).
 
-#### 5. Health Check (Experimental)
+#### 4. Health Check (Experimental)
 
 ```bash
 # Run all checks
