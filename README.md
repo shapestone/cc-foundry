@@ -325,14 +325,74 @@ claude-code-foundry/
 └── README.md               # This file
 ```
 
+### File Format Conventions
+
+All commands, agents, and skills must follow Claude Code's file format conventions:
+
+#### Commands (`commands/*.md`)
+```markdown
+---
+name: command-name
+description: Brief description of what this command does
+---
+
+# Command Name
+
+[Command content and instructions]
+```
+
+#### Agents (`agents/*.md`)
+```markdown
+---
+name: agent-name
+description: Brief description of agent's purpose and capabilities
+tools: [Bash, Glob, Grep, Read, Write, Edit, WebFetch, TodoWrite]
+---
+
+# Agent Name
+
+## Purpose
+[Detailed agent description]
+
+[Agent instructions and workflow]
+```
+
+**Required fields:**
+- `name`: Kebab-case identifier matching the filename (e.g., `oss-auditor` for `oss-auditor.md`)
+- `description`: One-sentence summary (used in listings)
+- `tools`: Array of tools the agent can use (agents only)
+
+#### Skills (`skills/*.md`)
+```markdown
+---
+name: skill-name
+description: Brief description of skill's knowledge domain
+---
+
+# Skill Name
+
+[Knowledge content and guidance]
+```
+
 ### Adding New Categories
 
 To contribute new categories or files:
 
 1. Create category folder: `categories/[category-name]/`
 2. Add subdirectories: `commands/`, `agents/`, `skills/`
-3. Add markdown files with descriptive names
-4. Submit pull request
+3. Create markdown files following format conventions above:
+   - Use kebab-case for filenames (e.g., `my-command.md`)
+   - Ensure `name` field in frontmatter matches filename
+   - Provide clear, concise descriptions
+   - For agents, specify required tools
+4. Verify formatting:
+   - Frontmatter uses YAML format with `---` delimiters
+   - Required fields are present
+   - Content is well-structured and documented
+5. Submit pull request with:
+   - Clear description of what the files do
+   - Use cases and examples
+   - Any dependencies or requirements
 
 Files will automatically be embedded in the next binary build.
 

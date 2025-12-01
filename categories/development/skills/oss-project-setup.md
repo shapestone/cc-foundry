@@ -1,5 +1,5 @@
 ---
-name: open-source-project-setup
+name: oss-project-setup
 description: Assesses open source projects (new or existing) and recommends appropriate documentation and structure based on project characteristics, complexity, and maturity. Takes a diagnostic-first approach to guide projects from minimal setup through mature governance.
 ---
 
