@@ -48,6 +48,17 @@ PROD_BUILD_FLAGS := -ldflags="$(VERSION_FLAGS) -s -w"
 # Install location
 INSTALL_DIR := /usr/local/bin
 
+# Code signing and notarization settings (macOS only)
+# Set these as environment variables or pass to make:
+# export CODESIGN_IDENTITY="Developer ID Application: Your Name (TEAM_ID)"
+# export NOTARIZE_APPLE_ID="your-apple-id@example.com"
+# export NOTARIZE_PASSWORD="xxxx-xxxx-xxxx-xxxx"  # App-specific password from appleid.apple.com
+# export NOTARIZE_TEAM_ID="YOUR_TEAM_ID"
+CODESIGN_IDENTITY ?=
+NOTARIZE_APPLE_ID ?=
+NOTARIZE_PASSWORD ?=
+NOTARIZE_TEAM_ID ?=
+
 # Default target
 .DEFAULT_GOAL := help
 
@@ -64,14 +75,33 @@ help: ## Show this help message
 
 # Build targets
 .PHONY: build
-build: ## Build the application (development)
+build: ## Build the application (development, no signing for speed)
+	@echo "Building $(PROJECT_NAME) for $(DETECTED_OS)..."
+	@$(MKDIR) $(BIN_DIR)
+	$(GOBUILD) $(BUILD_FLAGS) -o $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT) ./$(CMD_DIR)
+	@echo "✓ Built to $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT)"
+	@echo "Note: For signed/notarized build, use 'make build-signed' or 'make release'"
+
+.PHONY: build-signed
+build-signed: ## Build and sign with Developer ID (no notarization)
 	@echo "Building $(PROJECT_NAME) for $(DETECTED_OS)..."
 	@$(MKDIR) $(BIN_DIR)
 	$(GOBUILD) $(BUILD_FLAGS) -o $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT) ./$(CMD_DIR)
 ifeq ($(DETECTED_OS),macOS)
+	@if [ -z "$(CODESIGN_IDENTITY)" ]; then \
+		echo "Error: CODESIGN_IDENTITY must be set"; \
+		echo ""; \
+		echo "Find your identity with:"; \
+		echo "  security find-identity -v -p codesigning"; \
+		echo ""; \
+		echo "Then set:"; \
+		echo "  export CODESIGN_IDENTITY='Developer ID Application: Your Name (TEAM_ID)'"; \
+		exit 1; \
+	fi
 	@xattr -cr $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT) 2>/dev/null || true
-	@codesign --sign - --force --deep $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT) 2>/dev/null || echo "Warning: Could not sign binary (continuing...)"
-	@echo "✓ Built and signed: $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT)"
+	@codesign --sign "$(CODESIGN_IDENTITY)" --timestamp --options=runtime --force $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT) 2>/dev/null || echo "Warning: Could not sign binary (continuing...)"
+	@echo "✓ Built and signed with Developer ID: $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT)"
+	@echo "Note: Binary is signed but NOT notarized. Use 'make release' for full notarization."
 else
 	@echo "✓ Built to $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT)"
 endif
@@ -83,8 +113,8 @@ build-prod: ## Build optimized production binary
 	$(GOBUILD) $(PROD_BUILD_FLAGS) -o $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT) ./$(CMD_DIR)
 ifeq ($(DETECTED_OS),macOS)
 	@xattr -cr $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT) 2>/dev/null || true
-	@codesign --sign - --force --deep $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT) 2>/dev/null || echo "Warning: Could not sign binary (continuing...)"
-	@echo "✓ Production build signed: $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT)"
+	@codesign --sign "$(CODESIGN_IDENTITY)" --timestamp --options=runtime --force $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT) 2>/dev/null || echo "Warning: Could not sign binary (continuing...)"
+	@echo "✓ Production build signed with Developer ID: $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT)"
 else
 	@echo "✓ Production build: $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT)"
 endif
@@ -106,8 +136,8 @@ build-darwin-amd64: ## Build for macOS Intel
 	@$(MKDIR) $(BIN_DIR)
 	GOOS=darwin GOARCH=amd64 $(GOBUILD) $(PROD_BUILD_FLAGS) -o $(BIN_DIR)/$(PROJECT_NAME)-darwin-amd64 ./$(CMD_DIR)
 	@xattr -cr $(BIN_DIR)/$(PROJECT_NAME)-darwin-amd64 2>/dev/null || true
-	@codesign --sign - --force --deep $(BIN_DIR)/$(PROJECT_NAME)-darwin-amd64 2>/dev/null || echo "Warning: Could not sign binary"
-	@echo "✓ $(BIN_DIR)/$(PROJECT_NAME)-darwin-amd64 (signed)"
+	@codesign --sign "$(CODESIGN_IDENTITY)" --timestamp --options=runtime --force $(BIN_DIR)/$(PROJECT_NAME)-darwin-amd64 2>/dev/null || echo "Warning: Could not sign binary"
+	@echo "✓ $(BIN_DIR)/$(PROJECT_NAME)-darwin-amd64 (signed with Developer ID)"
 
 .PHONY: build-darwin-arm64
 build-darwin-arm64: ## Build for macOS Apple Silicon
@@ -115,8 +145,8 @@ build-darwin-arm64: ## Build for macOS Apple Silicon
 	@$(MKDIR) $(BIN_DIR)
 	GOOS=darwin GOARCH=arm64 $(GOBUILD) $(PROD_BUILD_FLAGS) -o $(BIN_DIR)/$(PROJECT_NAME)-darwin-arm64 ./$(CMD_DIR)
 	@xattr -cr $(BIN_DIR)/$(PROJECT_NAME)-darwin-arm64 2>/dev/null || true
-	@codesign --sign - --force --deep $(BIN_DIR)/$(PROJECT_NAME)-darwin-arm64 2>/dev/null || echo "Warning: Could not sign binary"
-	@echo "✓ $(BIN_DIR)/$(PROJECT_NAME)-darwin-arm64 (signed)"
+	@codesign --sign "$(CODESIGN_IDENTITY)" --timestamp --options=runtime --force $(BIN_DIR)/$(PROJECT_NAME)-darwin-arm64 2>/dev/null || echo "Warning: Could not sign binary"
+	@echo "✓ $(BIN_DIR)/$(PROJECT_NAME)-darwin-arm64 (signed with Developer ID)"
 
 .PHONY: build-windows
 build-windows: ## Build for Windows x64
@@ -124,6 +154,59 @@ build-windows: ## Build for Windows x64
 	@$(MKDIR) $(BIN_DIR)
 	GOOS=windows GOARCH=amd64 $(GOBUILD) $(PROD_BUILD_FLAGS) -o $(BIN_DIR)/$(PROJECT_NAME)-windows-amd64.exe ./$(CMD_DIR)
 	@echo "✓ $(BIN_DIR)/$(PROJECT_NAME)-windows-amd64.exe"
+
+# Notarization (macOS only)
+.PHONY: notarize
+notarize: ## Notarize macOS binary with Apple (requires NOTARIZE_APPLE_ID and NOTARIZE_PASSWORD)
+	@if [ "$(DETECTED_OS)" != "macOS" ]; then \
+		echo "Notarization is only available on macOS"; \
+		exit 1; \
+	fi
+	@if [ -z "$(NOTARIZE_APPLE_ID)" ] || [ -z "$(NOTARIZE_PASSWORD)" ] || [ -z "$(NOTARIZE_TEAM_ID)" ]; then \
+		echo "Error: NOTARIZE_APPLE_ID, NOTARIZE_PASSWORD, and NOTARIZE_TEAM_ID must be set"; \
+		echo ""; \
+		echo "Get app-specific password from: https://appleid.apple.com/account/manage"; \
+		echo "Find your Team ID with:"; \
+		echo "  security find-identity -v -p codesigning"; \
+		echo "  (Look for the 10-character code in parentheses)"; \
+		echo ""; \
+		echo "Then run:"; \
+		echo "  export NOTARIZE_APPLE_ID='your-email@example.com'"; \
+		echo "  export NOTARIZE_PASSWORD='xxxx-xxxx-xxxx-xxxx'"; \
+		echo "  export NOTARIZE_TEAM_ID='YOUR_TEAM_ID'"; \
+		echo "  make notarize"; \
+		exit 1; \
+	fi
+	@echo "Notarizing $(PROJECT_NAME) with Apple..."
+	@echo "This may take 5-15 minutes..."
+	@$(RM) $(BIN_DIR)/$(PROJECT_NAME).zip 2>/dev/null || true
+	@cd $(BIN_DIR) && zip -q $(PROJECT_NAME).zip $(PROJECT_NAME)
+	@xcrun notarytool submit $(BIN_DIR)/$(PROJECT_NAME).zip \
+		--apple-id "$(NOTARIZE_APPLE_ID)" \
+		--password "$(NOTARIZE_PASSWORD)" \
+		--team-id "$(NOTARIZE_TEAM_ID)" \
+		--wait
+	@echo "Stapling notarization ticket..."
+	@xcrun stapler staple $(BIN_DIR)/$(PROJECT_NAME) 2>/dev/null || echo "Warning: Could not staple ticket"
+	@$(RM) $(BIN_DIR)/$(PROJECT_NAME).zip
+	@echo "✓ Notarization complete"
+	@echo ""
+	@echo "Verify with:"
+	@echo "  spctl --assess --verbose=4 --type execute $(BIN_DIR)/$(PROJECT_NAME)"
+
+.PHONY: notarize-check
+notarize-check: ## Check if binary is notarized
+	@if [ "$(DETECTED_OS)" != "macOS" ]; then \
+		echo "Notarization check only available on macOS"; \
+		exit 1; \
+	fi
+	@echo "Checking notarization status..."
+	@spctl --assess --verbose=4 --type execute $(BIN_DIR)/$(PROJECT_NAME) 2>&1 || true
+	@echo ""
+	@codesign -dv $(BIN_DIR)/$(PROJECT_NAME) 2>&1 | grep -E "(Authority|TeamIdentifier|Timestamp)" || true
+
+.PHONY: build-notarize
+build-notarize: build notarize ## Build and notarize in one step
 
 # Dependency management
 .PHONY: deps
@@ -248,7 +331,20 @@ debug: ## Show Makefile variables
 
 # Release
 .PHONY: release
-release: clean build-all ## Clean and build for all platforms
+release: clean build-signed notarize ## Clean, build, sign, and notarize for macOS release
+	@echo ""
+	@echo "✓ Release build complete and notarized!"
+	@echo ""
+	@echo "Verify with:"
+	@echo "  spctl --assess --verbose=4 --type execute $(BIN_DIR)/$(PROJECT_NAME)"
+	@echo ""
+	@echo "Install with:"
+	@echo "  make install"
+
+.PHONY: release-all
+release-all: clean build-all ## Clean and build for all platforms (cross-compile only)
 	@echo ""
 	@echo "✓ Release builds complete:"
 	@ls -lh $(BIN_DIR)/
+	@echo ""
+	@echo "Note: Only macOS builds are signed. Use 'make release' for notarized macOS binary."

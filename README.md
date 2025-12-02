@@ -63,92 +63,104 @@ claude-code-foundry helps teams maintain consistent Claude Code configurations b
 # Clone the repository
 git clone https://github.com/shapestone/claude-code-foundry.git
 cd claude-code-foundry
+```
 
-# Build and install
+#### Development Build (Fast, Unsigned)
+
+For local development and testing:
+
+```bash
+# Fast build without code signing
+make build
+
+# Install unsigned binary
 make install
 ```
 
-This installs the `claude-code-foundry` binary to your system.
+**Note**: Unsigned binaries will be blocked by macOS Gatekeeper. Use System Settings to allow (see below).
+
+#### Release Build (Signed + Notarized)
+
+For distribution or production use on macOS Tahoe 16.1+ (requires Apple Developer ID):
+
+```bash
+# Find your code signing identity and Team ID
+security find-identity -v -p codesigning
+
+# Set up credentials (one time)
+export CODESIGN_IDENTITY="Developer ID Application: Your Name (TEAM_ID)"
+export NOTARIZE_APPLE_ID="your-apple-id@example.com"
+export NOTARIZE_PASSWORD="xxxx-xxxx-xxxx-xxxx"  # App-specific password
+export NOTARIZE_TEAM_ID="YOUR_TEAM_ID"  # 10-character code from identity
+
+# Build, sign, and notarize (takes 5-15 minutes)
+make release
+
+# Install notarized binary
+make install
+```
+
+**Get app-specific password**: https://appleid.apple.com/account/manage → Sign-In and Security → App-Specific Passwords
 
 ### Verify Installation
 
 ```bash
-claude-code-foundry --version
+claude-code-foundry version
 ```
 
 ### macOS Gatekeeper Security
 
-⚠️ **macOS Sequoia 15.1+ Users (November 2024+)**
+#### macOS Tahoe 16.1+ (Current Requirement)
 
-Apple significantly tightened security controls in macOS Sequoia 15.1. You may see this warning:
+Apple requires **notarization** for binaries to run without warnings. You have two options:
 
-> **"claude-code-foundry" was not opened because it contains malware.**
+**Option 1: Use Notarized Release Build** (Recommended for production)
 
-**This is a FALSE POSITIVE.** The binary is safe - you built it from source. This happens because:
-- Locally-built binaries aren't notarized by Apple
-- Sequoia 15.1 removed the Control-click bypass option
-- Extended attributes from the build system trigger Gatekeeper
+```bash
+# Requires Apple Developer ID ($99/year)
+export CODESIGN_IDENTITY="Developer ID Application: Your Name (TEAM_ID)"
+export NOTARIZE_APPLE_ID="your-apple-id@example.com"
+export NOTARIZE_PASSWORD="xxxx-xxxx-xxxx-xxxx"
+export NOTARIZE_TEAM_ID="YOUR_TEAM_ID"
+make release
+```
 
-**Required Fix for Sequoia 15.1+:**
+This produces a fully signed and notarized binary that runs without any Gatekeeper warnings.
 
-**Option 1: System Settings Override (Required on Sequoia 15.1+)**
+**Option 2: Allow Unsigned Binary via System Settings** (Development only)
 
-1. Try to run the binary (it will be blocked):
+For local development with unsigned binaries:
+
+1. Try to run the binary (will be blocked):
    ```bash
-   ./build/bin/claude-code-foundry
+   ./build/bin/claude-code-foundry version
    ```
 
 2. Open **System Settings** → **Privacy & Security**
 
-3. Scroll down to **Security** section
+3. Scroll to **Security** section
 
-4. You'll see: *"claude-code-foundry" was blocked from use because it contains malware*
+4. Click **"Open Anyway"** next to the block message
 
-5. Click **"Open Anyway"**
+5. Try running again - click **"Open"** in the confirmation dialog
 
-6. Try running again - click **"Open"** in the final confirmation
+#### Understanding the Makefile Build Options
 
-**Option 2: Manual Fix Script**
-
-```bash
-# Clear attributes and force re-sign
-xattr -cr build/bin/claude-code-foundry
-codesign --sign - --force --deep build/bin/claude-code-foundry
-```
-
-Then use Option 1 (System Settings) if still blocked.
-
-**Option 3: Rebuild with Updated Makefile**
-
-```bash
-# The Makefile now automatically clears attributes and signs
-make clean
-make build
-```
-
-**For Older macOS Versions (pre-Sequoia 15.1):**
-
-Right-click the binary → **Open** → Click **Open** in the dialog.
-
-**What is ad-hoc signing?**
-- Local-only code signing without Apple Developer certificate
-- Marks the binary as trusted by you
-- Prevents Gatekeeper from blocking it (on older macOS versions)
-- Safe for binaries you built yourself
-- **Note:** Does not allow distribution to other users
-- **macOS Sequoia 15.1+:** Still requires System Settings override
+| Target | Signing | Notarization | Speed | Use Case |
+|--------|---------|--------------|-------|----------|
+| `make build` | ❌ No | ❌ No | ⚡ Fast | Local development |
+| `make build-signed` | ✅ Yes | ❌ No | 🐢 Slow | Testing signed builds |
+| `make release` | ✅ Yes | ✅ Yes | 🐌 Very Slow (5-15 min) | Production/distribution |
 
 **Why This Happens:**
 
-macOS Sequoia 15.1 (November 2024) introduced stricter Gatekeeper controls that:
-- Removed Control-click bypass for unsigned/improperly signed apps
-- Enforce quarantine-like behavior on locally-built binaries
-- Require explicit user approval via System Settings
+macOS Tahoe 16.1+ requires **Apple notarization** for binaries to run without warnings. This is a security feature that:
+- Prevents malware distribution
+- Requires an Apple Developer ID ($99/year)
+- Takes 5-15 minutes per binary (uploaded to Apple's servers)
+- Is necessary for distributing software to other users
 
-The Makefile now automatically:
-1. Clears extended attributes (`xattr -cr`)
-2. Force signs with deep flag (`codesign --sign - --force --deep`)
-3. This happens on all macOS builds (`make build`, `make install`, `make build-darwin-*`)
+For local development, you can use unsigned binaries with System Settings override.
 
 ---
 
