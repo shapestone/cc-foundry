@@ -76,6 +76,36 @@ This installs the `claude-code-foundry` binary to your system.
 claude-code-foundry --version
 ```
 
+### macOS Gatekeeper Security
+
+On macOS, you may see this warning when running the binary:
+
+> "claude-code-foundry" cannot be opened because it is from an unidentified developer.
+
+This is expected for locally-built binaries. The `make build` command automatically ad-hoc signs the binary to prevent this issue.
+
+**If you still see the warning:**
+
+**Option 1: Quick Fix (Recommended)**
+```bash
+# Ad-hoc sign the binary
+codesign -s - build/bin/claude-code-foundry
+```
+
+**Option 2: Manual Override**
+1. Right-click the binary and select **Open**
+2. Click **Open** in the security dialog
+3. OR go to **System Settings** → **Privacy & Security** → Click **"Open Anyway"**
+
+**What is ad-hoc signing?**
+- Local-only code signing without Apple Developer certificate
+- Marks the binary as trusted by you
+- Prevents Gatekeeper from blocking it
+- Safe for binaries you built yourself
+- **Note:** Does not allow distribution to other users
+
+The Makefile automatically signs all macOS builds (`make build`, `make install`, `make build-darwin-*`).
+
 ---
 
 ## Usage

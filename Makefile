@@ -68,14 +68,24 @@ build: ## Build the application (development)
 	@echo "Building $(PROJECT_NAME) for $(DETECTED_OS)..."
 	@$(MKDIR) $(BIN_DIR)
 	$(GOBUILD) $(BUILD_FLAGS) -o $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT) ./$(CMD_DIR)
+ifeq ($(DETECTED_OS),macOS)
+	@codesign -s - $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT) 2>/dev/null || echo "Warning: Could not sign binary (continuing...)"
+	@echo "✓ Built and signed: $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT)"
+else
 	@echo "✓ Built to $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT)"
+endif
 
 .PHONY: build-prod
 build-prod: ## Build optimized production binary
 	@echo "Building $(PROJECT_NAME) (production) for $(DETECTED_OS)..."
 	@$(MKDIR) $(BIN_DIR)
 	$(GOBUILD) $(PROD_BUILD_FLAGS) -o $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT) ./$(CMD_DIR)
+ifeq ($(DETECTED_OS),macOS)
+	@codesign -s - $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT) 2>/dev/null || echo "Warning: Could not sign binary (continuing...)"
+	@echo "✓ Production build signed: $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT)"
+else
 	@echo "✓ Production build: $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT)"
+endif
 
 # Cross-platform builds
 .PHONY: build-all
@@ -93,14 +103,16 @@ build-darwin-amd64: ## Build for macOS Intel
 	@echo "Building for macOS Intel..."
 	@$(MKDIR) $(BIN_DIR)
 	GOOS=darwin GOARCH=amd64 $(GOBUILD) $(PROD_BUILD_FLAGS) -o $(BIN_DIR)/$(PROJECT_NAME)-darwin-amd64 ./$(CMD_DIR)
-	@echo "✓ $(BIN_DIR)/$(PROJECT_NAME)-darwin-amd64"
+	@codesign -s - $(BIN_DIR)/$(PROJECT_NAME)-darwin-amd64 2>/dev/null || echo "Warning: Could not sign binary"
+	@echo "✓ $(BIN_DIR)/$(PROJECT_NAME)-darwin-amd64 (signed)"
 
 .PHONY: build-darwin-arm64
 build-darwin-arm64: ## Build for macOS Apple Silicon
 	@echo "Building for macOS Apple Silicon..."
 	@$(MKDIR) $(BIN_DIR)
 	GOOS=darwin GOARCH=arm64 $(GOBUILD) $(PROD_BUILD_FLAGS) -o $(BIN_DIR)/$(PROJECT_NAME)-darwin-arm64 ./$(CMD_DIR)
-	@echo "✓ $(BIN_DIR)/$(PROJECT_NAME)-darwin-arm64"
+	@codesign -s - $(BIN_DIR)/$(PROJECT_NAME)-darwin-arm64 2>/dev/null || echo "Warning: Could not sign binary"
+	@echo "✓ $(BIN_DIR)/$(PROJECT_NAME)-darwin-arm64 (signed)"
 
 .PHONY: build-windows
 build-windows: ## Build for Windows x64
