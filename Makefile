@@ -69,7 +69,8 @@ build: ## Build the application (development)
 	@$(MKDIR) $(BIN_DIR)
 	$(GOBUILD) $(BUILD_FLAGS) -o $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT) ./$(CMD_DIR)
 ifeq ($(DETECTED_OS),macOS)
-	@codesign -s - $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT) 2>/dev/null || echo "Warning: Could not sign binary (continuing...)"
+	@xattr -cr $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT) 2>/dev/null || true
+	@codesign --sign - --force --deep $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT) 2>/dev/null || echo "Warning: Could not sign binary (continuing...)"
 	@echo "✓ Built and signed: $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT)"
 else
 	@echo "✓ Built to $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT)"
@@ -81,7 +82,8 @@ build-prod: ## Build optimized production binary
 	@$(MKDIR) $(BIN_DIR)
 	$(GOBUILD) $(PROD_BUILD_FLAGS) -o $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT) ./$(CMD_DIR)
 ifeq ($(DETECTED_OS),macOS)
-	@codesign -s - $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT) 2>/dev/null || echo "Warning: Could not sign binary (continuing...)"
+	@xattr -cr $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT) 2>/dev/null || true
+	@codesign --sign - --force --deep $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT) 2>/dev/null || echo "Warning: Could not sign binary (continuing...)"
 	@echo "✓ Production build signed: $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT)"
 else
 	@echo "✓ Production build: $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT)"
@@ -103,7 +105,8 @@ build-darwin-amd64: ## Build for macOS Intel
 	@echo "Building for macOS Intel..."
 	@$(MKDIR) $(BIN_DIR)
 	GOOS=darwin GOARCH=amd64 $(GOBUILD) $(PROD_BUILD_FLAGS) -o $(BIN_DIR)/$(PROJECT_NAME)-darwin-amd64 ./$(CMD_DIR)
-	@codesign -s - $(BIN_DIR)/$(PROJECT_NAME)-darwin-amd64 2>/dev/null || echo "Warning: Could not sign binary"
+	@xattr -cr $(BIN_DIR)/$(PROJECT_NAME)-darwin-amd64 2>/dev/null || true
+	@codesign --sign - --force --deep $(BIN_DIR)/$(PROJECT_NAME)-darwin-amd64 2>/dev/null || echo "Warning: Could not sign binary"
 	@echo "✓ $(BIN_DIR)/$(PROJECT_NAME)-darwin-amd64 (signed)"
 
 .PHONY: build-darwin-arm64
@@ -111,7 +114,8 @@ build-darwin-arm64: ## Build for macOS Apple Silicon
 	@echo "Building for macOS Apple Silicon..."
 	@$(MKDIR) $(BIN_DIR)
 	GOOS=darwin GOARCH=arm64 $(GOBUILD) $(PROD_BUILD_FLAGS) -o $(BIN_DIR)/$(PROJECT_NAME)-darwin-arm64 ./$(CMD_DIR)
-	@codesign -s - $(BIN_DIR)/$(PROJECT_NAME)-darwin-arm64 2>/dev/null || echo "Warning: Could not sign binary"
+	@xattr -cr $(BIN_DIR)/$(PROJECT_NAME)-darwin-arm64 2>/dev/null || true
+	@codesign --sign - --force --deep $(BIN_DIR)/$(PROJECT_NAME)-darwin-arm64 2>/dev/null || echo "Warning: Could not sign binary"
 	@echo "✓ $(BIN_DIR)/$(PROJECT_NAME)-darwin-arm64 (signed)"
 
 .PHONY: build-windows

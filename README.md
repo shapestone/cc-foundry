@@ -78,33 +78,77 @@ claude-code-foundry --version
 
 ### macOS Gatekeeper Security
 
-On macOS, you may see this warning when running the binary:
+⚠️ **macOS Sequoia 15.1+ Users (November 2024+)**
 
-> "claude-code-foundry" cannot be opened because it is from an unidentified developer.
+Apple significantly tightened security controls in macOS Sequoia 15.1. You may see this warning:
 
-This is expected for locally-built binaries. The `make build` command automatically ad-hoc signs the binary to prevent this issue.
+> **"claude-code-foundry" was not opened because it contains malware.**
 
-**If you still see the warning:**
+**This is a FALSE POSITIVE.** The binary is safe - you built it from source. This happens because:
+- Locally-built binaries aren't notarized by Apple
+- Sequoia 15.1 removed the Control-click bypass option
+- Extended attributes from the build system trigger Gatekeeper
 
-**Option 1: Quick Fix (Recommended)**
+**Required Fix for Sequoia 15.1+:**
+
+**Option 1: System Settings Override (Required on Sequoia 15.1+)**
+
+1. Try to run the binary (it will be blocked):
+   ```bash
+   ./build/bin/claude-code-foundry
+   ```
+
+2. Open **System Settings** → **Privacy & Security**
+
+3. Scroll down to **Security** section
+
+4. You'll see: *"claude-code-foundry" was blocked from use because it contains malware*
+
+5. Click **"Open Anyway"**
+
+6. Try running again - click **"Open"** in the final confirmation
+
+**Option 2: Manual Fix Script**
+
 ```bash
-# Ad-hoc sign the binary
-codesign -s - build/bin/claude-code-foundry
+# Clear attributes and force re-sign
+xattr -cr build/bin/claude-code-foundry
+codesign --sign - --force --deep build/bin/claude-code-foundry
 ```
 
-**Option 2: Manual Override**
-1. Right-click the binary and select **Open**
-2. Click **Open** in the security dialog
-3. OR go to **System Settings** → **Privacy & Security** → Click **"Open Anyway"**
+Then use Option 1 (System Settings) if still blocked.
+
+**Option 3: Rebuild with Updated Makefile**
+
+```bash
+# The Makefile now automatically clears attributes and signs
+make clean
+make build
+```
+
+**For Older macOS Versions (pre-Sequoia 15.1):**
+
+Right-click the binary → **Open** → Click **Open** in the dialog.
 
 **What is ad-hoc signing?**
 - Local-only code signing without Apple Developer certificate
 - Marks the binary as trusted by you
-- Prevents Gatekeeper from blocking it
+- Prevents Gatekeeper from blocking it (on older macOS versions)
 - Safe for binaries you built yourself
 - **Note:** Does not allow distribution to other users
+- **macOS Sequoia 15.1+:** Still requires System Settings override
 
-The Makefile automatically signs all macOS builds (`make build`, `make install`, `make build-darwin-*`).
+**Why This Happens:**
+
+macOS Sequoia 15.1 (November 2024) introduced stricter Gatekeeper controls that:
+- Removed Control-click bypass for unsigned/improperly signed apps
+- Enforce quarantine-like behavior on locally-built binaries
+- Require explicit user approval via System Settings
+
+The Makefile now automatically:
+1. Clears extended attributes (`xattr -cr`)
+2. Force signs with deep flag (`codesign --sign - --force --deep`)
+3. This happens on all macOS builds (`make build`, `make install`, `make build-darwin-*`)
 
 ---
 
