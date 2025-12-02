@@ -15,7 +15,7 @@ claude-code-foundry modifies critical system files and directories:
 
 - `~/.claude.json` - Claude Code's main configuration file
 - `~/.claude/` - User-level Claude Code file directories
-- `.claude/` - Project-level Claude Code file directories (if using `--project`)
+- `.claude/` - Project-level Claude Code file directories
 - `~/.claude-code-foundry.json` - State tracking file
 - `~/.claude-code-foundry-backups/` - Backup directory
 

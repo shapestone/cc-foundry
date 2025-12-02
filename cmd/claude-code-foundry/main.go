@@ -18,44 +18,13 @@ func init() {
 	embedpkg.CategoriesFS = embeddata.Categories
 }
 
-var locationFlagProvided bool
-
 func main() {
 	if len(os.Args) < 2 {
 		printUsage()
 		os.Exit(1)
 	}
 
-	// Parse flags before command
-	args := os.Args[1:]
-	locationFlagProvided = false
-
-	for len(args) > 0 && strings.HasPrefix(args[0], "--") {
-		flag := args[0]
-		args = args[1:]
-
-		switch flag {
-		case "--user":
-			installer.CurrentInstallMode = installer.InstallModeUser
-			locationFlagProvided = true
-		case "--project":
-			installer.CurrentInstallMode = installer.InstallModeProject
-			locationFlagProvided = true
-		default:
-			fmt.Fprintf(os.Stderr, "Unknown flag: %s\n\n", flag)
-			printUsage()
-			os.Exit(1)
-		}
-	}
-
-	if len(args) == 0 {
-		printUsage()
-		os.Exit(1)
-	}
-
-	command := args[0]
-	// Update os.Args to skip processed flags
-	os.Args = append([]string{os.Args[0]}, args...)
+	command := os.Args[1]
 
 	switch command {
 	case "list":
@@ -79,11 +48,7 @@ func printUsage() {
 	fmt.Println(`claude-code-foundry - Manage Claude Code files
 
 Usage:
-  claude-code-foundry [flags] <command> [arguments]
-
-Flags:
-  --user                     Install to ~/.claude/ (user-level, all projects) [default]
-  --project                  Install to .claude/ (project-level, version-controlled)
+  claude-code-foundry <command> [arguments]
 
 Commands:
   list <target>              List available categories and their contents
@@ -107,21 +72,24 @@ Examples:
   claude-code-foundry install all
   claude-code-foundry install development
   claude-code-foundry install development agents
-  claude-code-foundry --project install development skills
   claude-code-foundry remove development skills
 
 Note:
+  The install and remove commands prompt you to choose the installation location:
+  - User-level (~/.claude/) - Available across all projects
+  - Project-level (.claude/) - Specific to current project
+
   The install command automatically updates existing files if they've changed.
   Files that are already installed and unchanged will be skipped.
 
 Installation Locations:
 
-User-level (--user, default):
+User-level:
   ~/.claude/commands/           - Command files (flat .md files)
   ~/.claude/agents/             - Agent files (flat .md files)
   ~/.claude/skills/[name]/      - Skill subdirectories with SKILL.md
 
-Project-level (--project):
+Project-level:
   .claude/commands/             - Command files (flat .md files)
   .claude/agents/               - Agent files (flat .md files)
   .claude/skills/[name]/        - Skill subdirectories with SKILL.md
@@ -228,11 +196,9 @@ func handleInstall() {
 
 	target := os.Args[2]
 
-	// Prompt for location if not provided via flag
-	if !locationFlagProvided {
-		if !installer.PromptForLocation() {
-			os.Exit(0)
-		}
+	// Prompt for location
+	if !installer.PromptForLocation() {
+		os.Exit(0)
 	}
 
 	// Handle install all
@@ -317,11 +283,9 @@ func handleRemove() {
 
 	target := os.Args[2]
 
-	// Prompt for location if not provided via flag
-	if !locationFlagProvided {
-		if !installer.PromptForLocation() {
-			os.Exit(0)
-		}
+	// Prompt for location
+	if !installer.PromptForLocation() {
+		os.Exit(0)
 	}
 
 	// Handle remove all

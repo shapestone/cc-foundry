@@ -131,19 +131,6 @@ This will:
      No, cancel
    ```
 
-**Non-Interactive Mode** (with flags):
-
-```bash
-# Install to personal location (~/.claude/)
-claude-code-foundry --user install all
-
-# Install to project location (.claude/)
-claude-code-foundry --project install development
-
-# Install specific type from category
-claude-code-foundry --user install development skills
-```
-
 #### Installation Locations
 
 **Personal (User-level)** - Default choice:
@@ -520,14 +507,14 @@ All category files are embedded directly in the binary using Go's `embed.FS`:
 
 If Claude Code directories don't exist, the tool will create them automatically:
 
-**User-level** (default):
+**User-level**:
 ```
 ~/.claude/commands/
 ~/.claude/agents/
 ~/.claude/skills/
 ```
 
-**Project-level** (with `--project` flag):
+**Project-level**:
 ```
 .claude/commands/
 .claude/agents/
