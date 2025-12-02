@@ -80,151 +80,278 @@ claude-code-foundry --version
 
 ## Usage
 
-### Getting Started
+### Interactive Mode
 
-#### 1. List Available Categories
-
-```bash
-# Show all categories with their contents
-claude-code-foundry list all
-
-# Show specific category
-claude-code-foundry list development
-```
-
-Example output:
-```
-Available Categories:
-
-📁 development/
-  Agents:
-    - oss-auditor.md
-  Skills:
-    - makefile-skills-guide.md
-    - oss-project-setup.md
-```
-
-#### 2. Install Files
-
-**Interactive Mode** (recommended):
+Simply run the command without arguments to launch the interactive menu:
 
 ```bash
-# Install with interactive prompts
-claude-code-foundry install development
+claude-code-foundry
 ```
 
-This will:
-1. **Prompt for location**: Arrow-key navigable menu to choose between:
+You'll see a main menu with arrow-key navigation:
+
+```
+🔧 claude-code-foundry - Manage Claude Code files
+
+What would you like to do?
+❯ Show directory structure
+  List available files
+  Install files
+  Remove files
+  Doctor (verify & repair)
+  Version information
+  Help
+  Exit
+```
+
+Navigate with **↑/↓ arrows**, select with **Enter**, cancel with **Ctrl+C**.
+
+---
+
+### Main Menu Options
+
+#### 1. Show Directory Structure
+
+Displays your Claude Code directory structure and installed files:
+
+```
+📁 Claude Code Directory Structure
+
+User-level (~/.claude/):
+  commands/  (5 files)
+  agents/    (3 files)
+  skills/    (2 skills)
+
+Project-level (.claude/):
+  ✗ Directory does not exist
+
+📦 Installed Files (managed by foundry)
+
+  development: 2 commands, 1 agent, 2 skills
+
+  Total: 5 files installed
+```
+
+#### 2. List Available Files
+
+Browse available categories and their contents:
+
+1. Select category from list:
+   ```
+   Select category to list
+   ❯ development (2 commands, 1 agent, 2 skills)
+     deployment (1 command, 1 agent, 0 skills)
+     ← Back to main menu
+   ```
+
+2. View files in category:
+   ```
+   Category: development
+
+   Commands:
+     - implement.md
+     - review.md
+
+   Agents:
+     - oss-auditor.md
+
+   Skills:
+     - makefile-skills-guide.md
+     - oss-project-setup.md
+   ```
+
+#### 3. Install Files
+
+Install commands, agents, and skills to your system:
+
+1. **Select category**:
+   ```
+   Select category to install
+   ❯ All categories
+     development (2 commands, 1 agent, 2 skills)
+     deployment (1 command, 1 agent, 0 skills)
+     ← Back to main menu
+   ```
+
+2. **Choose location**:
    ```
    Choose location
    ❯ 1. Project (.claude/)
      2. Personal (~/.claude/)
    ```
-2. **Show preview**: Display what will be installed/updated/skipped
-   - `+` New installation
-   - `↻` Update (content changed)
-   - `·` Skip (unchanged)
-3. **Ask for confirmation**: Arrow-key navigable menu:
+
+3. **Preview changes**:
+   ```
+   Preview: development [user-level (~/.claude/)]
+
+     + command: ccf-development-implement.md → ~/.claude/commands/ccf-development-implement.md
+     ↻ agent: ccf-development-oss-auditor.md → ~/.claude/agents/ccf-development-oss-auditor.md (will update)
+     · skill: ccf-development-makefile-skills-guide/SKILL.md → ~/.claude/skills/... (unchanged)
+
+   Summary: 1 to install, 1 to update, 1 unchanged
+   ```
+
+4. **Confirm installation**:
    ```
    Proceed with installation?
    ❯ Yes, proceed
      No, cancel
    ```
 
-#### Installation Locations
+**Symbols:**
+- `+` New installation
+- `↻` Update (content changed)
+- `·` Skip (unchanged)
 
-**Personal (User-level)** - Default choice:
-- **Location**: `~/.claude/` in your home directory
+#### 4. Remove Files
+
+Remove installed files:
+
+1. **Select category**:
+   ```
+   Select category to remove
+   ❯ All categories
+     development (2 commands, 1 agent, 2 skills)
+     ← Back to main menu
+   ```
+
+2. **Choose location**:
+   ```
+   Choose location
+   ❯ 1. Project (.claude/)
+     2. Personal (~/.claude/)
+   ```
+
+3. **Preview removal**:
+   ```
+   Preview: Remove category development [user-level (~/.claude/)]
+
+     - command: ~/.claude/commands/ccf-development-implement.md
+     - agent: ~/.claude/agents/ccf-development-oss-auditor.md
+     - skill: ~/.claude/skills/ccf-development-makefile-skills-guide
+
+   Summary: 3 files will be removed
+   ```
+
+4. **Confirm removal**:
+   ```
+   Proceed with removal?
+   ❯ Yes, remove
+     No, cancel
+   ```
+
+#### 5. Doctor (Verify & Repair)
+
+Run diagnostics and fix issues:
+
+```
+🏥 Running doctor diagnostics...
+
+Checking Claude Code configuration...
+Checking installed file integrity...
+Detecting conflicts...
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 Health Report
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Files checked: 5
+⚠️  Warnings: 2
+Modified files: 1
+Orphaned files: 1
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Issues Found:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️  [development] Modified file detected: ~/.claude/commands/ccf-development-implement.md (hash mismatch)
+
+⚠️  [orphaned] Orphaned foundry file: ~/.claude/commands/ccf-old-command.md (not tracked in state)
+   (can be fixed)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1 issue(s) can be automatically fixed.
+
+Would you like to fix these issues?
+❯ Yes, fix all issues
+  No, leave as is
+```
+
+The doctor command checks:
+- **~/.claude.json validity**: Verifies config file exists and is valid JSON
+- **File integrity**: Compares installed file hashes to detect modifications
+- **Conflict detection**: Finds orphaned ccf- files not tracked in state
+- **Auto-repair**: Offers to fix detected issues
+
+#### 6. Version Information
+
+Shows the current version:
+
+```
+claude-code-foundry v1.0.0
+```
+
+#### 7. Help
+
+Displays usage information and file structure details.
+
+---
+
+### Installation Locations
+
+**Personal (User-level)** - `~/.claude/`:
 - **Scope**: Available across all projects
 - **Use when**: You want these files available everywhere you use Claude Code
 - **Example**: General-purpose agents/skills you use daily
 
-**Project (Project-level)** - Version-controlled:
-- **Location**: `.claude/` in your current project directory
+**Project (Project-level)** - `.claude/`:
 - **Scope**: Only available in this specific project
 - **Version control**: Can be committed to git and shared with team
 - **Use when**: Project-specific configurations or team-shared commands
 
-**Paths:**
+**Directory Structure:**
 
-Personal (`~/.claude/`):
-- `~/.claude/commands/` - Command files (flat `.md` files)
-- `~/.claude/agents/` - Agent files (flat `.md` files)
-- `~/.claude/skills/[skill-name]/` - Skill subdirectories containing `SKILL.md`
+```
+~/.claude/                          OR    .claude/
+├── commands/                             ├── commands/
+│   └── ccf-[category]-[name].md          │   └── ccf-[category]-[name].md
+├── agents/                               ├── agents/
+│   └── ccf-[category]-[name].md          │   └── ccf-[category]-[name].md
+└── skills/                               └── skills/
+    └── ccf-[category]-[name]/                └── ccf-[category]-[name]/
+        └── SKILL.md                              └── SKILL.md
+```
 
-Project (`.claude/`):
-- `.claude/commands/` - Command files (flat `.md` files)
-- `.claude/agents/` - Agent files (flat `.md` files)
-- `.claude/skills/[skill-name]/` - Skill subdirectories containing `SKILL.md`
+**Naming Convention**: All files use `ccf-[category]-[name]` format to prevent conflicts:
+- `development/commands/implement.md` → `ccf-development-implement.md`
+- `development/agents/oss-auditor.md` → `ccf-development-oss-auditor.md`
+- `development/skills/oss-project-setup.md` → `ccf-development-oss-project-setup/SKILL.md`
 
-**Naming Convention**: All installed files use the `ccf-[category]-[filename]` format to prevent conflicts:
-- `development/commands/deploy.md` → `~/.claude/commands/ccf-development-deploy.md`
-- `development/agents/oss-auditor.md` → `~/.claude/agents/ccf-development-oss-auditor.md`
-- `development/skills/oss-project-setup.md` → `~/.claude/skills/ccf-development-oss-project-setup/SKILL.md`
+---
 
-**Note**: The `install` command automatically updates existing files if they've changed. Files that are unchanged will be skipped. You can re-run `install` at any time to update to the latest versions.
+### Tips
 
-#### 3. Remove Files
+- **Navigate anywhere**: Use ← Back option or Ctrl+C to return to previous menu
+- **Preview before changes**: All operations show preview before making changes
+- **Safe operations**: Automatic backups created, rollback on failure
+- **Update files**: Re-run install to update to latest versions (unchanged files skipped)
+- **Check health regularly**: Run doctor to verify installation integrity
+
+---
+
+### Future: Non-Interactive Mode
+
+Command-line arguments for scripting will be added in a future release, allowing:
 
 ```bash
-# Remove everything foundry installed
-claude-code-foundry remove all
-
-# Remove specific category
-claude-code-foundry remove development
-
-# Remove specific type
-claude-code-foundry remove development commands
+# Not yet available - coming in future version
+claude-code-foundry install --category development --location user --yes
 ```
 
-Only removes files that foundry installed (tracked in state file).
+For now, the interactive menu provides the full feature set.
 
-#### 4. Health Check (Experimental)
-
-```bash
-# Run all checks
-claude-code-foundry doctor
-
-# Check only ~/.claude.json
-claude-code-foundry doctor config
-
-# Check only ccf-managed files
-claude-code-foundry doctor files
-
-# Preview without making changes
-claude-code-foundry doctor --dry-run
-```
-
-The doctor command analyzes:
-- **Config issues**: Bloated `~/.claude.json` files causing performance problems
-- **File integrity**: Missing, orphaned, or modified ccf-managed files
-- **Smart cleanup**: Removes stale projects and excessive conversation history
-
-Example output:
-```
-Analysis of ~/.claude.json:
-- File size: 65.2 MB
-- Total projects: 147
-- Conversation history: 58.3 MB (89%)
-
-Detected issues:
-✓ 89 projects not accessed in 120+ days (48.2 MB)
-✓ 23 projects with excessive history (10.1 MB)
-✓ 5 orphaned projects (directories deleted) (2.3 MB)
-
-Checking foundry-managed files...
-✓ 23 files installed and verified
-⚠ 2 files modified locally
-⚠ 1 orphaned file found
-
-Suggested cleanup: 60.6 MB → 4.6 MB (93% reduction)
-
-What would you like to do?
-1. Clean ~/.claude.json (recommended)
-2. Fix foundry issues
-3. Both
-4. Exit
-```
+---
 
 ### Interactive Help
 

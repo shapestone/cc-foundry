@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/shapestone/claude-code-foundry/embeddata"
+	"github.com/shapestone/claude-code-foundry/pkg/doctor"
 	embedpkg "github.com/shapestone/claude-code-foundry/pkg/embed"
 	"github.com/shapestone/claude-code-foundry/pkg/installer"
 	"github.com/shapestone/claude-code-foundry/pkg/state"
@@ -19,101 +20,269 @@ func init() {
 }
 
 func main() {
+	// Interactive mode - show main menu
 	if len(os.Args) < 2 {
-		printUsage()
-		os.Exit(1)
+		runInteractiveMode()
+		return
 	}
 
-	command := os.Args[1]
+	// For future: support command-line arguments for scripting
+	// For now, always run interactive mode
+	runInteractiveMode()
+}
 
-	switch command {
-	case "list":
-		handleList()
-	case "install":
-		handleInstall()
-	case "remove":
-		handleRemove()
-	case "version", "--version", "-v":
-		fmt.Printf("claude-code-foundry v%s\n", version)
-	case "help", "--help", "-h":
-		printUsage()
-	default:
-		fmt.Fprintf(os.Stderr, "Unknown command: %s\n\n", command)
-		printUsage()
-		os.Exit(1)
+func runInteractiveMode() {
+	for {
+		option, err := installer.ShowMainMenu()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+
+		switch option {
+		case installer.MainMenuShow:
+			handleShow()
+		case installer.MainMenuList:
+			handleListInteractive()
+		case installer.MainMenuInstall:
+			handleInstallInteractive()
+		case installer.MainMenuRemove:
+			handleRemoveInteractive()
+		case installer.MainMenuDoctor:
+			handleDoctor()
+		case installer.MainMenuVersion:
+			fmt.Printf("\nclaude-code-foundry v%s\n", version)
+		case installer.MainMenuHelp:
+			printUsage()
+		case installer.MainMenuExit:
+			fmt.Println("\nGoodbye! 👋\n")
+			return
+		}
+	}
+}
+
+// handleShow displays the directory structure
+func handleShow() {
+	if err := installer.ShowDirectoryStructure(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	}
+}
+
+// handleListInteractive handles the interactive list flow
+func handleListInteractive() {
+	category, err := installer.ShowCategoryMenu("list")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return
+	}
+
+	// User chose to go back
+	if category == "" {
+		return
+	}
+
+	// List all or specific category
+	if category == "all" {
+		listAll()
+	} else {
+		listCategory(category)
+	}
+}
+
+// handleInstallInteractive handles the interactive install flow
+func handleInstallInteractive() {
+	// Select category
+	category, err := installer.ShowCategoryMenu("install")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return
+	}
+
+	// User chose to go back
+	if category == "" {
+		return
+	}
+
+	// Prompt for location
+	if !installer.PromptForLocation() {
+		return
+	}
+
+	// Handle install all
+	if category == "all" {
+		categories, err := embedpkg.ListCategories()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error listing categories: %v\n", err)
+			return
+		}
+
+		for _, cat := range categories {
+			proceed, err := installer.PreviewInstall(cat, "")
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				return
+			}
+
+			if !proceed {
+				fmt.Println("Installation cancelled.")
+				return
+			}
+
+			if err := installer.InstallCategory(cat); err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				return
+			}
+		}
+		return
+	}
+
+	// Preview and install specific category
+	proceed, err := installer.PreviewInstall(category, "")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return
+	}
+
+	if !proceed {
+		fmt.Println("Installation cancelled.")
+		return
+	}
+
+	if err := installer.InstallCategory(category); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return
+	}
+}
+
+// handleRemoveInteractive handles the interactive remove flow
+func handleRemoveInteractive() {
+	// Select category
+	category, err := installer.ShowCategoryMenu("remove")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return
+	}
+
+	// User chose to go back
+	if category == "" {
+		return
+	}
+
+	// Prompt for location
+	if !installer.PromptForLocation() {
+		return
+	}
+
+	// Handle remove all
+	if category == "all" {
+		st, err := state.Load()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			return
+		}
+
+		installations := st.ListInstallations("", "")
+		if len(installations) == 0 {
+			fmt.Println("\nNo files installed by foundry")
+			return
+		}
+
+		fmt.Printf("\nPreview: Remove all installed files [%s]\n", installer.GetInstallModeDescription())
+		fmt.Println()
+
+		for _, inst := range installations {
+			displayPath := inst.InstalledPath
+			if home, err := os.UserHomeDir(); err == nil {
+				displayPath = strings.Replace(inst.InstalledPath, home, "~", 1)
+			}
+			typeLabel := strings.TrimSuffix(inst.Type, "s")
+			fmt.Printf("  - %s: %s\n", typeLabel, displayPath)
+		}
+
+		fmt.Println()
+		fmt.Printf("Summary: %d files will be removed\n", len(installations))
+		fmt.Println()
+
+		if !installer.ConfirmAction("Proceed with removal?") {
+			fmt.Println("Removal cancelled.")
+			return
+		}
+
+		if err := installer.RemoveAll(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			return
+		}
+		return
+	}
+
+	// Preview and remove specific category
+	proceed, err := installer.PreviewRemove(category, "")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return
+	}
+
+	if !proceed {
+		fmt.Println("Removal cancelled.")
+		return
+	}
+
+	if err := installer.RemoveCategory(category); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return
+	}
+}
+
+// handleDoctor runs the doctor diagnostics
+func handleDoctor() {
+	report, err := doctor.Run()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error running doctor: %v\n", err)
+		return
+	}
+
+	doctor.PrintReport(report)
+
+	// Offer to fix issues
+	if err := doctor.OfferFixes(report, installer.SelectOption); err != nil {
+		fmt.Fprintf(os.Stderr, "Error offering fixes: %v\n", err)
+		return
 	}
 }
 
 func printUsage() {
-	fmt.Println(`claude-code-foundry - Manage Claude Code files
+	fmt.Println(`🔧 claude-code-foundry - Manage Claude Code files
 
-Usage:
-  claude-code-foundry <command> [arguments]
+Interactive Mode:
+  Just run: claude-code-foundry
 
-Commands:
-  list <target>              List available categories and their contents
-  install <target> [type]    Install or update files from categories
-  remove <target> [type]     Remove installed files
-  version                    Show version information
-  help                       Show this help message
-
-List targets:
-  list all                   Show all categories and their files
-  list <category>            Show files in a specific category
-
-Install/Remove targets:
-  <command> all              All categories
-  <command> <category>       Specific category
-  <command> <category> <type>  Specific type (commands|agents|skills)
-
-Examples:
-  claude-code-foundry list all
-  claude-code-foundry list development
-  claude-code-foundry install all
-  claude-code-foundry install development
-  claude-code-foundry install development agents
-  claude-code-foundry remove development skills
-
-Note:
-  The install and remove commands prompt you to choose the installation location:
-  - User-level (~/.claude/) - Available across all projects
-  - Project-level (.claude/) - Specific to current project
-
-  The install command automatically updates existing files if they've changed.
-  Files that are already installed and unchanged will be skipped.
+  The tool will guide you through an interactive menu to:
+  - Show directory structure and installed files
+  - List available commands, agents, and skills
+  - Install files to ~/.claude/ or .claude/
+  - Remove installed files
+  - Run diagnostics and repair (doctor)
 
 Installation Locations:
 
-User-level:
-  ~/.claude/commands/           - Command files (flat .md files)
-  ~/.claude/agents/             - Agent files (flat .md files)
-  ~/.claude/skills/[name]/      - Skill subdirectories with SKILL.md
+User-level (~/.claude/):
+  - Available across all projects
+  ~/.claude/commands/           Command files (flat .md files)
+  ~/.claude/agents/             Agent files (flat .md files)
+  ~/.claude/skills/[name]/      Skill subdirectories with SKILL.md
 
-Project-level:
-  .claude/commands/             - Command files (flat .md files)
-  .claude/agents/               - Agent files (flat .md files)
-  .claude/skills/[name]/        - Skill subdirectories with SKILL.md
+Project-level (.claude/):
+  - Specific to current project, can be version-controlled
+  .claude/commands/             Command files (flat .md files)
+  .claude/agents/               Agent files (flat .md files)
+  .claude/skills/[name]/        Skill subdirectories with SKILL.md
 
 File Naming:
   Commands/Agents: ccf-[category]-[filename].md
   Skills: ccf-[category]-[name]/SKILL.md
+
+Note: Non-interactive mode for scripting will be added in a future release.
 `)
-}
-
-func handleList() {
-	if len(os.Args) < 3 {
-		fmt.Fprintln(os.Stderr, "Error: list command requires a target")
-		fmt.Fprintln(os.Stderr, "Usage: claude-code-foundry list <all|category>")
-		os.Exit(1)
-	}
-
-	target := os.Args[2]
-
-	if target == "all" {
-		listAll()
-	} else {
-		listCategory(target)
-	}
 }
 
 func listAll() {
@@ -183,208 +352,6 @@ func listCategory(category string) {
 				fmt.Printf("  - %s\n", filename)
 			}
 			fmt.Println()
-		}
-	}
-}
-
-func handleInstall() {
-	if len(os.Args) < 3 {
-		fmt.Fprintln(os.Stderr, "Error: install command requires a target")
-		fmt.Fprintln(os.Stderr, "Usage: claude-code-foundry install <all|category> [type]")
-		os.Exit(1)
-	}
-
-	target := os.Args[2]
-
-	// Prompt for location
-	if !installer.PromptForLocation() {
-		os.Exit(0)
-	}
-
-	// Handle install all
-	if target == "all" {
-		// For "all", we need to preview and confirm each category
-		categories, err := embedpkg.ListCategories()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error listing categories: %v\n", err)
-			os.Exit(1)
-		}
-
-		for _, category := range categories {
-			// Preview changes
-			proceed, err := installer.PreviewInstall(category, "")
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				os.Exit(1)
-			}
-
-			if !proceed {
-				fmt.Println("Installation cancelled.")
-				os.Exit(0)
-			}
-
-			// Proceed with installation
-			if err := installer.InstallCategory(category); err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				os.Exit(1)
-			}
-		}
-		return
-	}
-
-	// Handle category with optional type
-	category := target
-	var fileType string
-
-	if len(os.Args) >= 4 {
-		fileType = os.Args[3]
-
-		// Validate type
-		if fileType != "commands" && fileType != "agents" && fileType != "skills" {
-			fmt.Fprintf(os.Stderr, "Error: invalid type '%s'. Must be: commands, agents, or skills\n", fileType)
-			os.Exit(1)
-		}
-	}
-
-	// Preview changes
-	proceed, err := installer.PreviewInstall(category, fileType)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
-
-	if !proceed {
-		fmt.Println("Installation cancelled.")
-		os.Exit(0)
-	}
-
-	// Proceed with installation
-	if fileType != "" {
-		// Install specific type
-		if err := installer.InstallType(category, fileType); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
-	} else {
-		// Install entire category
-		if err := installer.InstallCategory(category); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
-	}
-}
-
-func handleRemove() {
-	if len(os.Args) < 3 {
-		fmt.Fprintln(os.Stderr, "Error: remove command requires a target")
-		fmt.Fprintln(os.Stderr, "Usage: claude-code-foundry remove <all|category> [type]")
-		os.Exit(1)
-	}
-
-	target := os.Args[2]
-
-	// Prompt for location
-	if !installer.PromptForLocation() {
-		os.Exit(0)
-	}
-
-	// Handle remove all
-	if target == "all" {
-		// Preview all removals
-		st, err := state.Load()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
-
-		installations := st.ListInstallations("", "")
-		if len(installations) == 0 {
-			fmt.Println("\nNo files installed by foundry")
-			return
-		}
-
-		fmt.Printf("\nPreview: Remove all installed files [%s]\n", installer.GetInstallModeDescription())
-		fmt.Println()
-
-		for _, inst := range installations {
-			displayPath := inst.InstalledPath
-			if home, err := os.UserHomeDir(); err == nil {
-				displayPath = strings.Replace(inst.InstalledPath, home, "~", 1)
-			}
-			typeLabel := strings.TrimSuffix(inst.Type, "s")
-			fmt.Printf("  - %s: %s\n", typeLabel, displayPath)
-		}
-
-		fmt.Println()
-		fmt.Printf("Summary: %d files will be removed\n", len(installations))
-		fmt.Println()
-
-		// Ask for confirmation with arrow-key menu
-		options := []string{
-			"Yes, remove",
-			"No, cancel",
-		}
-
-		selected, err := installer.SelectOption("Proceed with removal?", options)
-		if err != nil {
-			if err.Error() == "cancelled by user" {
-				fmt.Println("Removal cancelled.")
-			} else {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			}
-			os.Exit(1)
-		}
-
-		if selected != 0 {
-			fmt.Println("Removal cancelled.")
-			os.Exit(0)
-		}
-
-		if err := installer.RemoveAll(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
-		return
-	}
-
-	// Handle category with optional type
-	category := target
-	var fileType string
-
-	if len(os.Args) >= 4 {
-		fileType = os.Args[3]
-
-		// Validate type
-		if fileType != "commands" && fileType != "agents" && fileType != "skills" {
-			fmt.Fprintf(os.Stderr, "Error: invalid type '%s'. Must be: commands, agents, or skills\n", fileType)
-			os.Exit(1)
-		}
-	}
-
-	// Preview changes
-	proceed, err := installer.PreviewRemove(category, fileType)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
-
-	if !proceed {
-		fmt.Println("Removal cancelled.")
-		os.Exit(0)
-	}
-
-	// Proceed with removal
-	if fileType != "" {
-		// Remove specific type
-		if err := installer.RemoveType(category, fileType); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
-	} else {
-		// Remove entire category
-		if err := installer.RemoveCategory(category); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
 		}
 	}
 }
