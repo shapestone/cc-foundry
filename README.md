@@ -106,27 +106,74 @@ Available Categories:
 
 #### 2. Install Files
 
+**Interactive Mode** (recommended):
+
 ```bash
-# Install everything
-claude-code-foundry install all
-
-# Install specific category
+# Install with interactive prompts
 claude-code-foundry install development
-
-# Install specific type from category
-claude-code-foundry install development commands
-claude-code-foundry install development agents
-claude-code-foundry install development skills
 ```
 
-Files are installed to:
-- `~/.claudecode/commands/` (or `~/.config/claude/commands/` on Linux)
-- `~/.claudecode/agents/`
-- `~/.claudecode/skills/`
+This will:
+1. **Prompt for location**: Arrow-key navigable menu to choose between:
+   ```
+   Choose location
+   ❯ 1. Project (.claude/)
+     2. Personal (~/.claude/)
+   ```
+2. **Show preview**: Display what will be installed/updated/skipped
+   - `+` New installation
+   - `↻` Update (content changed)
+   - `·` Skip (unchanged)
+3. **Ask for confirmation**: Arrow-key navigable menu:
+   ```
+   Proceed with installation?
+   ❯ Yes, proceed
+     No, cancel
+   ```
+
+**Non-Interactive Mode** (with flags):
+
+```bash
+# Install to personal location (~/.claude/)
+claude-code-foundry --user install all
+
+# Install to project location (.claude/)
+claude-code-foundry --project install development
+
+# Install specific type from category
+claude-code-foundry --user install development skills
+```
+
+#### Installation Locations
+
+**Personal (User-level)** - Default choice:
+- **Location**: `~/.claude/` in your home directory
+- **Scope**: Available across all projects
+- **Use when**: You want these files available everywhere you use Claude Code
+- **Example**: General-purpose agents/skills you use daily
+
+**Project (Project-level)** - Version-controlled:
+- **Location**: `.claude/` in your current project directory
+- **Scope**: Only available in this specific project
+- **Version control**: Can be committed to git and shared with team
+- **Use when**: Project-specific configurations or team-shared commands
+
+**Paths:**
+
+Personal (`~/.claude/`):
+- `~/.claude/commands/` - Command files (flat `.md` files)
+- `~/.claude/agents/` - Agent files (flat `.md` files)
+- `~/.claude/skills/[skill-name]/` - Skill subdirectories containing `SKILL.md`
+
+Project (`.claude/`):
+- `.claude/commands/` - Command files (flat `.md` files)
+- `.claude/agents/` - Agent files (flat `.md` files)
+- `.claude/skills/[skill-name]/` - Skill subdirectories containing `SKILL.md`
 
 **Naming Convention**: All installed files use the `ccf-[category]-[filename]` format to prevent conflicts:
-- `development/commands/deploy.md` → `~/.claudecode/commands/ccf-development-deploy.md`
-- `deployment/commands/deploy.md` → `~/.claudecode/commands/ccf-deployment-deploy.md`
+- `development/commands/deploy.md` → `~/.claude/commands/ccf-development-deploy.md`
+- `development/agents/oss-auditor.md` → `~/.claude/agents/ccf-development-oss-auditor.md`
+- `development/skills/oss-project-setup.md` → `~/.claude/skills/ccf-development-oss-project-setup/SKILL.md`
 
 **Note**: The `install` command automatically updates existing files if they've changed. Files that are unchanged will be skipped. You can re-run `install` at any time to update to the latest versions.
 
@@ -433,9 +480,17 @@ The CLI tracks installations in `~/.claude-code-foundry.json`:
       "category": "development",
       "type": "command",
       "file": "deploy-to-production.md",
-      "installed_path": "~/.claudecode/commands/ccf-development-deploy-to-production.md",
+      "installed_path": "~/.claude/commands/ccf-development-deploy-to-production.md",
       "hash": "abc123...",
       "installed_at": "2025-12-01T10:00:00Z"
+    },
+    {
+      "category": "development",
+      "type": "skill",
+      "file": "oss-project-setup.md",
+      "installed_path": "~/.claude/skills/ccf-development-oss-project-setup/SKILL.md",
+      "hash": "def456...",
+      "installed_at": "2025-12-01T10:01:00Z"
     }
   ]
 }
@@ -463,14 +518,20 @@ All category files are embedded directly in the binary using Go's `embed.FS`:
 
 ### Claude Code Directory Not Found
 
-If Claude Code directories don't exist, the tool will prompt you:
+If Claude Code directories don't exist, the tool will create them automatically:
 
+**User-level** (default):
 ```
-Claude Code directories not found at:
-  ~/.claudecode/
-  ~/.config/claude/
+~/.claude/commands/
+~/.claude/agents/
+~/.claude/skills/
+```
 
-Would you like to create them? (y/n)
+**Project-level** (with `--project` flag):
+```
+.claude/commands/
+.claude/agents/
+.claude/skills/
 ```
 
 ### File Conflicts

@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: GitHub Discussions
+    url: https://github.com/shapestone/claude-code-foundry/discussions
+    about: Ask questions, share ideas, or discuss the project with the community
+  - name: Security Vulnerability
+    url: mailto:security@shapestone.io
+    about: Report security vulnerabilities privately (DO NOT open a public issue)
+  - name: Documentation
+    url: https://github.com/shapestone/claude-code-foundry#readme
+    about: Read the project README and documentation

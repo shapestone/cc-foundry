@@ -4,27 +4,41 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	embedpkg "github.com/shapestone/claude-code-foundry/pkg/embed"
 	"github.com/shapestone/claude-code-foundry/pkg/state"
 )
 
-// GetClaudeCodeDir returns the Claude Code directory path based on OS
+// InstallMode determines where files are installed
+type InstallMode int
+
+const (
+	InstallModeUser    InstallMode = iota // ~/.claude/ (user-level, all projects)
+	InstallModeProject                     // .claude/ (project-level, version-controlled)
+)
+
+// CurrentInstallMode is the active installation mode (default: user-level)
+var CurrentInstallMode = InstallModeUser
+
+// GetClaudeCodeDir returns the Claude Code directory path based on install mode
 func GetClaudeCodeDir() (string, error) {
+	if CurrentInstallMode == InstallModeProject {
+		// Project-level: .claude/ in current directory
+		cwd, err := os.Getwd()
+		if err != nil {
+			return "", fmt.Errorf("failed to get current directory: %w", err)
+		}
+		return filepath.Join(cwd, ".claude"), nil
+	}
+
+	// User-level: ~/.claude/
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("failed to get home directory: %w", err)
 	}
 
-	// Linux uses ~/.config/claude/
-	if runtime.GOOS == "linux" {
-		return filepath.Join(home, ".config", "claude"), nil
-	}
-
-	// macOS and others use ~/.claudecode/
-	return filepath.Join(home, ".claudecode"), nil
+	return filepath.Join(home, ".claude"), nil
 }
 
 // GetTypeDir returns the full path to a specific type directory (commands, agents, skills)
@@ -75,12 +89,29 @@ func InstallFile(file embedpkg.CategoryFile, st *state.State) error {
 		return err
 	}
 
-	// Generate installed filename
-	installedFilename := GenerateInstalledFilename(file.Category, file.Filename)
-	installedPath := filepath.Join(typeDir, installedFilename)
+	// Generate installed filename/path based on type
+	var installedPath, displayPath, installedFilename string
+
+	if file.Type == "skills" {
+		// Skills: subdirectory with SKILL.md
+		skillName := GenerateInstalledFilename(file.Category, file.Filename)
+		skillName = strings.TrimSuffix(skillName, ".md") // Remove .md extension
+		skillDir := filepath.Join(typeDir, skillName)
+		installedPath = filepath.Join(skillDir, "SKILL.md")
+		installedFilename = filepath.Join(skillName, "SKILL.md")
+
+		// Create skill subdirectory
+		if err := os.MkdirAll(skillDir, 0755); err != nil {
+			return fmt.Errorf("failed to create skill directory %s: %w", skillDir, err)
+		}
+	} else {
+		// Commands and agents: flat .md files
+		installedFilename = GenerateInstalledFilename(file.Category, file.Filename)
+		installedPath = filepath.Join(typeDir, installedFilename)
+	}
 
 	// Format display path (replace home with ~)
-	displayPath := installedPath
+	displayPath = installedPath
 	if home, err := os.UserHomeDir(); err == nil {
 		displayPath = strings.Replace(installedPath, home, "~", 1)
 	}
@@ -137,7 +168,7 @@ func InstallCategory(category string) error {
 		return fmt.Errorf("failed to load state: %w", err)
 	}
 
-	fmt.Printf("\nInstalling category: %s\n", category)
+	fmt.Printf("\nInstalling category: %s [%s]\n", category, GetInstallModeDescription())
 
 	for _, file := range files {
 		if err := InstallFile(file, st); err != nil {
@@ -149,7 +180,7 @@ func InstallCategory(category string) error {
 		return fmt.Errorf("failed to save state: %w", err)
 	}
 
-	fmt.Printf("\n✓ Successfully installed %d files from category '%s'\n", len(files), category)
+	fmt.Printf("\n✓ Successfully installed %d files from category '%s' [%s]\n", len(files), category, GetInstallModeDescription())
 	return nil
 }
 
@@ -169,7 +200,7 @@ func InstallType(category, fileType string) error {
 		return fmt.Errorf("failed to load state: %w", err)
 	}
 
-	fmt.Printf("\nInstalling %s from category: %s\n", fileType, category)
+	fmt.Printf("\nInstalling %s from category: %s [%s]\n", fileType, category, GetInstallModeDescription())
 
 	for _, file := range files {
 		if err := InstallFile(file, st); err != nil {
@@ -181,8 +212,16 @@ func InstallType(category, fileType string) error {
 		return fmt.Errorf("failed to save state: %w", err)
 	}
 
-	fmt.Printf("\n✓ Successfully installed %d %s from category '%s'\n", len(files), fileType, category)
+	fmt.Printf("\n✓ Successfully installed %d %s from category '%s' [%s]\n", len(files), fileType, category, GetInstallModeDescription())
 	return nil
+}
+
+// GetInstallModeDescription returns a human-readable description of the current install mode
+func GetInstallModeDescription() string {
+	if CurrentInstallMode == InstallModeProject {
+		return "project-level (.claude/)"
+	}
+	return "user-level (~/.claude/)"
 }
 
 // InstallAll installs all files from all categories
@@ -196,7 +235,7 @@ func InstallAll() error {
 		return fmt.Errorf("no categories found")
 	}
 
-	fmt.Printf("\nInstalling all categories: %s\n", strings.Join(categories, ", "))
+	fmt.Printf("\nInstalling all categories: %s [%s]\n", strings.Join(categories, ", "), GetInstallModeDescription())
 
 	for _, category := range categories {
 		if err := InstallCategory(category); err != nil {
@@ -209,8 +248,20 @@ func InstallAll() error {
 
 // RemoveInstallation removes a single installed file
 func RemoveInstallation(installation state.Installation) error {
-	if err := os.Remove(installation.InstalledPath); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("failed to remove file %s: %w", installation.InstalledPath, err)
+	// For skills, remove the entire subdirectory
+	if installation.Type == "skills" {
+		// Path is like: ~/.claude/skills/ccf-development-oss-project-setup/SKILL.md
+		// We want to remove: ~/.claude/skills/ccf-development-oss-project-setup/
+		skillDir := filepath.Dir(installation.InstalledPath)
+
+		if err := os.RemoveAll(skillDir); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("failed to remove skill directory %s: %w", skillDir, err)
+		}
+	} else {
+		// For commands and agents, just remove the file
+		if err := os.Remove(installation.InstalledPath); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("failed to remove file %s: %w", installation.InstalledPath, err)
+		}
 	}
 
 	// Format display path (replace home with ~)
@@ -238,7 +289,7 @@ func RemoveCategory(category string) error {
 		return fmt.Errorf("no files installed from category '%s'", category)
 	}
 
-	fmt.Printf("\nRemoving %d files from category: %s\n", len(installations), category)
+	fmt.Printf("\nRemoving %d files from category: %s [%s]\n", len(installations), category, GetInstallModeDescription())
 
 	for _, inst := range installations {
 		if err := RemoveInstallation(inst); err != nil {
@@ -251,7 +302,7 @@ func RemoveCategory(category string) error {
 		return fmt.Errorf("failed to save state: %w", err)
 	}
 
-	fmt.Printf("\n✓ Successfully removed %d files from category '%s'\n", len(installations), category)
+	fmt.Printf("\n✓ Successfully removed %d files from category '%s' [%s]\n", len(installations), category, GetInstallModeDescription())
 	return nil
 }
 
@@ -267,7 +318,7 @@ func RemoveType(category, fileType string) error {
 		return fmt.Errorf("no %s installed from category '%s'", fileType, category)
 	}
 
-	fmt.Printf("\nRemoving %d %s from category: %s\n", len(installations), fileType, category)
+	fmt.Printf("\nRemoving %d %s from category: %s [%s]\n", len(installations), fileType, category, GetInstallModeDescription())
 
 	for _, inst := range installations {
 		if err := RemoveInstallation(inst); err != nil {
@@ -280,7 +331,7 @@ func RemoveType(category, fileType string) error {
 		return fmt.Errorf("failed to save state: %w", err)
 	}
 
-	fmt.Printf("\n✓ Successfully removed %d %s from category '%s'\n", len(installations), fileType, category)
+	fmt.Printf("\n✓ Successfully removed %d %s from category '%s' [%s]\n", len(installations), fileType, category, GetInstallModeDescription())
 	return nil
 }
 
@@ -297,7 +348,7 @@ func RemoveAll() error {
 		return nil
 	}
 
-	fmt.Printf("\nRemoving all %d installed files\n", len(installations))
+	fmt.Printf("\nRemoving all %d installed files [%s]\n", len(installations), GetInstallModeDescription())
 
 	for _, inst := range installations {
 		if err := RemoveInstallation(inst); err != nil {
@@ -311,6 +362,6 @@ func RemoveAll() error {
 		return fmt.Errorf("failed to save state: %w", err)
 	}
 
-	fmt.Printf("\n✓ Successfully removed all installed files\n")
+	fmt.Printf("\n✓ Successfully removed all installed files [%s]\n", GetInstallModeDescription())
 	return nil
 }
