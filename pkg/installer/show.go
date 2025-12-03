@@ -296,15 +296,35 @@ func buildDirNode(label, dirPath string, isSkillsDir bool, depth int) (*treeNode
 	// Add files/subdirectories as children
 	for _, entry := range entries {
 		if isSkillsDir {
-			// For skills, show directories
+			// For skills, show directories and their contents
 			if entry.IsDir() {
+				skillPath := filepath.Join(dirPath, entry.Name())
 				skillNode := &treeNode{
 					label:    entry.Name() + "/",
-					path:     filepath.Join(dirPath, entry.Name()),
-					isDir:    false,
+					path:     skillPath,
+					isDir:    true,
 					expanded: false,
 					depth:    depth + 1,
 				}
+
+				// Count files in the skill directory
+				skillEntries, err := os.ReadDir(skillPath)
+				if err == nil {
+					for _, skillEntry := range skillEntries {
+						if !skillEntry.IsDir() {
+							fileNode := &treeNode{
+								label:    skillEntry.Name(),
+								path:     filepath.Join(skillPath, skillEntry.Name()),
+								isDir:    false,
+								expanded: false,
+								depth:    depth + 2,
+							}
+							skillNode.children = append(skillNode.children, fileNode)
+							skillNode.fileCount++
+						}
+					}
+				}
+
 				node.children = append(node.children, skillNode)
 				node.fileCount++
 			}
