@@ -58,16 +58,15 @@ func (m menuModel) View() string {
 	// Build menu items with styling
 	var menuItems string
 	for i, option := range m.options {
-		cursor := "  "
 		var line string
 
 		if i == m.selected {
 			// Selected item: highlighted with styled cursor
-			cursor = cursorStyle.Render("❯")
-			line = cursor + " " + selectedItemStyle.Render(option)
+			cursor := cursorStyle.Render("❯ ")
+			line = cursor + selectedItemStyle.Render(option)
 		} else {
 			// Normal item
-			line = cursor + " " + normalItemStyle.Render(option)
+			line = "  " + normalItemStyle.Render(option)
 		}
 
 		menuItems += line + "\n"
