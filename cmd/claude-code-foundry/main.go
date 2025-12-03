@@ -124,6 +124,7 @@ func handleInstallInteractive() {
 			proceed, err := installer.PreviewInstall(cat, "")
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				installer.WaitForKey()
 				return
 			}
 
@@ -134,9 +135,11 @@ func handleInstallInteractive() {
 
 			if err := installer.InstallCategory(cat); err != nil {
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				installer.WaitForKey()
 				return
 			}
 		}
+		installer.WaitForKey()
 		return
 	}
 
@@ -144,6 +147,7 @@ func handleInstallInteractive() {
 	proceed, err := installer.PreviewInstall(category, "")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		installer.WaitForKey()
 		return
 	}
 
@@ -154,8 +158,10 @@ func handleInstallInteractive() {
 
 	if err := installer.InstallCategory(category); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		installer.WaitForKey()
 		return
 	}
+	installer.WaitForKey()
 }
 
 // handleRemoveInteractive handles the interactive remove flow

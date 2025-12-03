@@ -128,11 +128,11 @@ func PromptForLocation() bool {
 	switch selected {
 	case 0:
 		CurrentInstallMode = InstallModeProject
-		fmt.Println("→ Installing to project location (.claude/)")
+		fmt.Println("→ Selected: project location (.claude/)")
 		return true
 	case 1:
 		CurrentInstallMode = InstallModeUser
-		fmt.Println("→ Installing to personal location (~/.claude/)")
+		fmt.Println("→ Selected: personal location (~/.claude/)")
 		return true
 	default:
 		fmt.Println("Invalid selection. Installation cancelled.")
