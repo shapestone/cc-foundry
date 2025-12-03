@@ -1,6 +1,7 @@
 package installer
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"strings"
@@ -68,7 +69,8 @@ func SelectOption(prompt string, options []string) (int, error) {
 		canceled: false,
 	}
 
-	p := tea.NewProgram(m)
+	// Use alternate screen buffer for clean, full-screen display
+	p := tea.NewProgram(m, tea.WithAltScreen())
 	finalModel, err := p.Run()
 	if err != nil {
 		return -1, fmt.Errorf("error running menu: %w", err)
@@ -295,4 +297,11 @@ func PreviewRemove(category string, fileType string) (bool, error) {
 	}
 
 	return selected == 0, nil
+}
+
+// WaitForKey waits for the user to press any key to continue
+func WaitForKey() {
+	fmt.Print("\nPress Enter to continue...")
+	reader := bufio.NewReader(os.Stdin)
+	reader.ReadString('\n')
 }

@@ -52,8 +52,10 @@ func runInteractiveMode() {
 			handleDoctor()
 		case installer.MainMenuVersion:
 			fmt.Printf("\nclaude-code-foundry v%s\n", version)
+			installer.WaitForKey()
 		case installer.MainMenuHelp:
 			printUsage()
+			installer.WaitForKey()
 		case installer.MainMenuExit:
 			fmt.Println("\nGoodbye! 👋\n")
 			return
@@ -87,6 +89,8 @@ func handleListInteractive() {
 	} else {
 		listCategory(category)
 	}
+
+	installer.WaitForKey()
 }
 
 // handleInstallInteractive handles the interactive install flow
