@@ -41,10 +41,18 @@ func (m treeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "up", "k":
 			if m.cursor > 0 {
 				m.cursor--
+				// Skip leaf files - only stop on directories
+				for m.cursor > 0 && !m.flatList[m.cursor].isDir {
+					m.cursor--
+				}
 			}
 		case "down", "j":
 			if m.cursor < len(m.flatList)-1 {
 				m.cursor++
+				// Skip leaf files - only stop on directories
+				for m.cursor < len(m.flatList)-1 && !m.flatList[m.cursor].isDir {
+					m.cursor++
+				}
 			}
 		case "right", "l", "enter":
 			// Expand current node (only if it has children)
@@ -72,8 +80,7 @@ func (m treeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m treeModel) View() string {
 	var sb strings.Builder
 
-	sb.WriteString("\n📁 Claude Code Directory Structure\n")
-	sb.WriteString("  Navigate: ↑/↓  Expand: →  Collapse: ←  Quit: q\n\n")
+	sb.WriteString("\n📁 Claude Code Directory Structure\n\n")
 
 	for i, node := range m.flatList {
 		// Cursor indicator
@@ -100,9 +107,11 @@ func (m treeModel) View() string {
 			indicator = "  "
 		}
 
-		// Label with count
+		// Label with count (but skip if label already contains parentheses with info)
 		label := node.label
-		if node.isDir && node.fileCount > 0 {
+		hasCountInfo := strings.Contains(node.label, "(") || strings.Contains(node.label, ":")
+
+		if !hasCountInfo && node.isDir && node.fileCount > 0 {
 			itemType := "files"
 			if strings.Contains(node.label, "skills") {
 				itemType = "skills"
@@ -111,47 +120,19 @@ func (m treeModel) View() string {
 				itemType = strings.TrimSuffix(itemType, "s")
 			}
 			label = fmt.Sprintf("%s (%d %s)", node.label, node.fileCount, itemType)
-		} else if node.isDir && node.fileCount == 0 {
+		} else if !hasCountInfo && node.isDir && node.fileCount == 0 {
 			label = fmt.Sprintf("%s (empty)", node.label)
+		}
+
+		// Add blank line BEFORE root-level sections (except the first one)
+		if node.depth == 0 && i > 0 {
+			sb.WriteString("\n")
 		}
 
 		sb.WriteString(fmt.Sprintf("%s%s%s%s\n", cursor, indent, indicator, label))
 	}
 
-	sb.WriteString("\n📦 Installed Files (managed by foundry)\n\n")
-
-	// Show installed files summary
-	st, err := state.Load()
-	if err == nil && len(st.Installations) > 0 {
-		byCategory := make(map[string][]state.Installation)
-		for _, inst := range st.Installations {
-			byCategory[inst.Category] = append(byCategory[inst.Category], inst)
-		}
-
-		for category, installations := range byCategory {
-			counts := make(map[string]int)
-			for _, inst := range installations {
-				counts[inst.Type]++
-			}
-
-			var countParts []string
-			if counts["commands"] > 0 {
-				countParts = append(countParts, fmt.Sprintf("%d command%s", counts["commands"], plural(counts["commands"])))
-			}
-			if counts["agents"] > 0 {
-				countParts = append(countParts, fmt.Sprintf("%d agent%s", counts["agents"], plural(counts["agents"])))
-			}
-			if counts["skills"] > 0 {
-				countParts = append(countParts, fmt.Sprintf("%d skill%s", counts["skills"], plural(counts["skills"])))
-			}
-
-			sb.WriteString(fmt.Sprintf("  %s: %s\n", category, strings.Join(countParts, ", ")))
-		}
-
-		sb.WriteString(fmt.Sprintf("\n  Total: %d file%s installed", len(st.Installations), plural(len(st.Installations))))
-	} else {
-		sb.WriteString("  No files installed by foundry yet")
-	}
+	sb.WriteString("\nNavigate: ↑/↓  Expand: →  Collapse: ←  Quit: q\n")
 
 	return sb.String()
 }
@@ -197,18 +178,36 @@ func buildTree() ([]*treeNode, error) {
 	var nodes []*treeNode
 
 	// User-level directory
-	userNode, err := buildLocationNode("User-level (~/.claude/)", true, 0)
+	userNode, err := buildLocationNode("🏠 User-level (~/.claude/)", true, 0)
 	if err != nil {
 		return nil, err
 	}
 	nodes = append(nodes, userNode)
 
 	// Project-level directory
-	projectNode, err := buildLocationNode("Project-level (.claude/)", false, 0)
+	projectNode, err := buildLocationNode("📂 Project-level (.claude/)", false, 0)
 	if err != nil {
 		return nil, err
 	}
 	nodes = append(nodes, projectNode)
+
+	// Installed files section
+	installedNode, err := buildInstalledFilesNode()
+	if err != nil {
+		return nil, err
+	}
+	if installedNode != nil {
+		nodes = append(nodes, installedNode)
+	} else {
+		// No installed files - show a message node
+		noFilesNode := &treeNode{
+			label:    "📦 Installed Files Managed by Foundry: No files installed yet",
+			isDir:    false,
+			expanded: false,
+			depth:    0,
+		}
+		nodes = append(nodes, noFilesNode)
+	}
 
 	return nodes, nil
 }
@@ -246,6 +245,7 @@ func buildLocationNode(label string, isUser bool, depth int) (*treeNode, error) 
 	}
 
 	// Add subdirectories
+	totalFiles := 0
 	for _, subdir := range []string{"commands", "agents", "skills"} {
 		subdirPath := filepath.Join(basePath, subdir)
 		subdirNode, err := buildDirNode(subdir+"/", subdirPath, subdir == "skills", depth+1)
@@ -253,7 +253,9 @@ func buildLocationNode(label string, isUser bool, depth int) (*treeNode, error) 
 			continue
 		}
 		node.children = append(node.children, subdirNode)
+		totalFiles += subdirNode.fileCount
 	}
+	node.fileCount = totalFiles
 
 	return node, nil
 }
@@ -312,6 +314,126 @@ func buildDirNode(label, dirPath string, isSkillsDir bool, depth int) (*treeNode
 	}
 
 	return node, nil
+}
+
+// buildInstalledFilesNode builds a tree node for installed files grouped by category
+func buildInstalledFilesNode() (*treeNode, error) {
+	st, err := state.Load()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(st.Installations) == 0 {
+		return nil, nil
+	}
+
+	// Create root node for installed files
+	rootNode := &treeNode{
+		label:    "📦 Installed Files Managed by Foundry",
+		isDir:    true,
+		expanded: false,
+		depth:    0,
+	}
+
+	// Group installations by category
+	byCategory := make(map[string][]state.Installation)
+	for _, inst := range st.Installations {
+		byCategory[inst.Category] = append(byCategory[inst.Category], inst)
+	}
+
+	// Create category nodes
+	for category, installations := range byCategory {
+		// Count by type
+		counts := make(map[string]int)
+		byType := make(map[string][]state.Installation)
+		for _, inst := range installations {
+			counts[inst.Type]++
+			byType[inst.Type] = append(byType[inst.Type], inst)
+		}
+
+		// Build count display
+		var countParts []string
+		if counts["commands"] > 0 {
+			countParts = append(countParts, fmt.Sprintf("%d command%s", counts["commands"], plural(counts["commands"])))
+		}
+		if counts["agents"] > 0 {
+			countParts = append(countParts, fmt.Sprintf("%d agent%s", counts["agents"], plural(counts["agents"])))
+		}
+		if counts["skills"] > 0 {
+			countParts = append(countParts, fmt.Sprintf("%d skill%s", counts["skills"], plural(counts["skills"])))
+		}
+
+		categoryLabel := fmt.Sprintf("%s: %s", category, strings.Join(countParts, ", "))
+		categoryNode := &treeNode{
+			label:     categoryLabel,
+			isDir:     true,
+			expanded:  false,
+			depth:     1,
+			fileCount: len(installations),
+		}
+
+		// Create type nodes (commands/, agents/, skills/)
+		for _, fileType := range []string{"commands", "agents", "skills"} {
+			typeInstallations := byType[fileType]
+
+			itemType := "file"
+			if fileType == "skills" {
+				itemType = "skill"
+			}
+			if len(typeInstallations) != 1 {
+				itemType += "s"
+			}
+
+			typeLabel := fileType + "/"
+			if len(typeInstallations) == 0 {
+				typeLabel += " (empty)"
+			} else {
+				typeLabel += fmt.Sprintf(" (%d %s)", len(typeInstallations), itemType)
+			}
+
+			typeNode := &treeNode{
+				label:     typeLabel,
+				isDir:     true,
+				expanded:  false,
+				depth:     2,
+				fileCount: len(typeInstallations),
+			}
+
+			// Add individual files under type
+			for _, inst := range typeInstallations {
+				// Get filename from path
+				filename := filepath.Base(inst.InstalledPath)
+				if inst.Type == "skills" {
+					// For skills, show the skill directory name
+					filename = filepath.Base(filepath.Dir(inst.InstalledPath))
+				}
+
+				// Determine location icon
+				locationIcon := "🏠"
+				if home, err := os.UserHomeDir(); err == nil {
+					if !strings.HasPrefix(inst.InstalledPath, home) {
+						locationIcon = "📂"
+					}
+				}
+
+				fileNode := &treeNode{
+					label:    fmt.Sprintf("%s %s", locationIcon, filename),
+					path:     inst.InstalledPath,
+					isDir:    false,
+					expanded: false,
+					depth:    3,
+				}
+				typeNode.children = append(typeNode.children, fileNode)
+			}
+
+			categoryNode.children = append(categoryNode.children, typeNode)
+		}
+
+		rootNode.children = append(rootNode.children, categoryNode)
+		rootNode.fileCount += len(installations)
+	}
+
+	return rootNode, nil
 }
 
 // appendLocation appends directory structure for a specific location to string builder
