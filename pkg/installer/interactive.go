@@ -5,89 +5,81 @@ import (
 	"os"
 	"strings"
 
+	tea "github.com/charmbracelet/bubbletea"
 	embedpkg "github.com/shapestone/claude-code-foundry/pkg/embed"
 	"github.com/shapestone/claude-code-foundry/pkg/state"
-	"golang.org/x/term"
 )
+
+// menuModel represents the state of the menu
+type menuModel struct {
+	prompt   string
+	options  []string
+	selected int
+	canceled bool
+}
+
+// Init implements tea.Model
+func (m menuModel) Init() tea.Cmd {
+	return nil
+}
+
+// Update implements tea.Model
+func (m menuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "ctrl+c", "q":
+			m.canceled = true
+			return m, tea.Quit
+		case "up", "k":
+			if m.selected > 0 {
+				m.selected--
+			}
+		case "down", "j":
+			if m.selected < len(m.options)-1 {
+				m.selected++
+			}
+		case "enter":
+			return m, tea.Quit
+		}
+	}
+	return m, nil
+}
+
+// View implements tea.Model
+func (m menuModel) View() string {
+	s := m.prompt + "\n\n"
+	for i, option := range m.options {
+		cursor := "  "
+		if i == m.selected {
+			cursor = "❯ "
+		}
+		s += cursor + option + "\n"
+	}
+	return s
+}
 
 // SelectOption displays an arrow-key navigable menu and returns the selected index
 func SelectOption(prompt string, options []string) (int, error) {
-	// Save original terminal state
-	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
+	m := menuModel{
+		prompt:   prompt,
+		options:  options,
+		selected: 0,
+		canceled: false,
+	}
+
+	p := tea.NewProgram(m)
+	finalModel, err := p.Run()
 	if err != nil {
-		return -1, fmt.Errorf("failed to set raw mode: %w", err)
-	}
-	defer term.Restore(int(os.Stdin.Fd()), oldState)
-
-	// Hide cursor during selection
-	fmt.Print("\033[?25l")
-	defer fmt.Print("\033[?25h") // Show cursor when done
-
-	selected := 0
-	buf := make([]byte, 3)
-	firstRender := true
-
-	// Initial render
-	renderMenu(prompt, options, selected, firstRender)
-	firstRender = false
-
-	for {
-		n, err := os.Stdin.Read(buf)
-		if err != nil {
-			return -1, err
-		}
-
-		// Check for arrow keys and Enter
-		if n == 3 && buf[0] == 27 && buf[1] == 91 {
-			// Arrow key sequence
-			switch buf[2] {
-			case 65: // Up arrow
-				if selected > 0 {
-					selected--
-					renderMenu(prompt, options, selected, firstRender)
-				}
-			case 66: // Down arrow
-				if selected < len(options)-1 {
-					selected++
-					renderMenu(prompt, options, selected, firstRender)
-				}
-			}
-		} else if n == 1 && (buf[0] == 13 || buf[0] == 10) {
-			// Enter key
-			fmt.Println() // Move to next line after selection
-			return selected, nil
-		} else if n == 1 && buf[0] == 3 {
-			// Ctrl+C
-			fmt.Println()
-			return -1, fmt.Errorf("cancelled by user")
-		}
-	}
-}
-
-// renderMenu renders the menu with the cursor at the selected option
-func renderMenu(prompt string, options []string, selected int, firstRender bool) {
-	if !firstRender {
-		// Move cursor up to beginning of menu (prompt + number of options)
-		linesToMove := len(options) + 1 // +1 for prompt line
-		fmt.Printf("\033[%dA", linesToMove)
-		// Move cursor to beginning of line
-		fmt.Print("\r")
+		return -1, fmt.Errorf("error running menu: %w", err)
 	}
 
-	// Clear from cursor to end of screen
-	fmt.Print("\033[J")
-
-	// Print prompt (in raw mode, need \r\n for proper newline)
-	fmt.Print(prompt + "\r\n")
-
-	// Print options with cursor (in raw mode, need \r\n for proper newline)
-	for i, option := range options {
-		if i == selected {
-			fmt.Print("❯ " + option + "\r\n")
-		} else {
-			fmt.Print("  " + option + "\r\n")
-		}
+	result := finalModel.(menuModel)
+	if result.canceled {
+		return -1, fmt.Errorf("cancelled by user")
 	}
+
+	return result.selected, nil
 }
 
 // PromptForLocation asks the user to choose between project and personal installation
