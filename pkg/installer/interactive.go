@@ -49,15 +49,37 @@ func (m menuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // View implements tea.Model
 func (m menuModel) View() string {
-	s := m.prompt + "\n\n"
+	// ASCII art banner at the top
+	header := bannerStyle.Render(banner)
+
+	// Styled prompt/title
+	prompt := promptStyle.Render(m.prompt)
+
+	// Build menu items with styling
+	var menuItems string
 	for i, option := range m.options {
 		cursor := "  "
+		var line string
+
 		if i == m.selected {
-			cursor = "❯ "
+			// Selected item: highlighted with styled cursor
+			cursor = cursorStyle.Render("❯")
+			line = cursor + " " + selectedItemStyle.Render(option)
+		} else {
+			// Normal item
+			line = cursor + " " + normalItemStyle.Render(option)
 		}
-		s += cursor + option + "\n"
+
+		menuItems += line + "\n"
 	}
-	return s
+
+	// Help text at bottom
+	helpText := helpStyle.Render("Navigate: ↑/↓  Select: Enter (↵)  Quit: q")
+
+	// Combine all elements with banner at top
+	content := header + "\n" + prompt + "\n\n" + menuItems + "\n" + helpText
+
+	return content
 }
 
 // SelectOption displays an arrow-key navigable menu and returns the selected index
