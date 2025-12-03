@@ -80,13 +80,20 @@ func (m treeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m treeModel) View() string {
 	var sb strings.Builder
 
-	sb.WriteString("\n📁 Claude Code Directory Structure\n\n")
+	// ASCII art banner at the top
+	sb.WriteString(bannerStyle.Render(banner))
+	sb.WriteString("\n")
+
+	// Styled title
+	title := titleStyle.Render("📁 Claude Code Directory Structure")
+	sb.WriteString(title)
+	sb.WriteString("\n\n")
 
 	for i, node := range m.flatList {
 		// Cursor indicator
 		cursor := "  "
 		if i == m.cursor {
-			cursor = "❯ "
+			cursor = cursorStyle.Render("❯ ")
 		}
 
 		// Indentation
@@ -132,7 +139,11 @@ func (m treeModel) View() string {
 		sb.WriteString(fmt.Sprintf("%s%s%s%s\n", cursor, indent, indicator, label))
 	}
 
-	sb.WriteString("\nNavigate: ↑/↓  Expand: →  Collapse: ←  Quit: q\n")
+	// Styled help text at bottom
+	help := helpStyle.Render("Navigate: ↑/↓  Expand: →  Collapse: ←  Quit: q")
+	sb.WriteString("\n")
+	sb.WriteString(help)
+	sb.WriteString("\n")
 
 	return sb.String()
 }
