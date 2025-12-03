@@ -65,7 +65,7 @@ git clone https://github.com/shapestone/claude-code-foundry.git
 cd claude-code-foundry
 ```
 
-#### Development Build (Fast, Unsigned)
+#### Development Build (Fast)
 
 For local development and testing:
 
@@ -73,34 +73,9 @@ For local development and testing:
 # Fast build without code signing
 make build
 
-# Install unsigned binary
+# Install binary
 make install
 ```
-
-**Note**: Unsigned binaries will be blocked by macOS Gatekeeper. Use System Settings to allow (see below).
-
-#### Release Build (Signed + Notarized)
-
-For distribution or production use on macOS Tahoe 16.1+ (requires Apple Developer ID):
-
-```bash
-# Find your code signing identity and Team ID
-security find-identity -v -p codesigning
-
-# Set up credentials (one time)
-export CODESIGN_IDENTITY="Developer ID Application: Your Name (TEAM_ID)"
-export NOTARIZE_APPLE_ID="your-apple-id@example.com"
-export NOTARIZE_PASSWORD="xxxx-xxxx-xxxx-xxxx"  # App-specific password
-export NOTARIZE_TEAM_ID="YOUR_TEAM_ID"  # 10-character code from identity
-
-# Build, sign, and notarize (takes 5-15 minutes)
-make release
-
-# Install notarized binary
-make install
-```
-
-**Get app-specific password**: https://appleid.apple.com/account/manage → Sign-In and Security → App-Specific Passwords
 
 ### Verify Installation
 
@@ -108,59 +83,26 @@ make install
 claude-code-foundry version
 ```
 
-### macOS Gatekeeper Security
+### macOS Release Build (Optional)
 
-#### macOS Tahoe 16.1+ (Current Requirement)
-
-Apple requires **notarization** for binaries to run without warnings. You have two options:
-
-**Option 1: Use Notarized Release Build** (Recommended for production)
+For distributing to other users or production deployments, you can create a signed and notarized release:
 
 ```bash
 # Requires Apple Developer ID ($99/year)
+# Find your identity: security find-identity -v -p codesigning
+
 export CODESIGN_IDENTITY="Developer ID Application: Your Name (TEAM_ID)"
 export NOTARIZE_APPLE_ID="your-apple-id@example.com"
-export NOTARIZE_PASSWORD="xxxx-xxxx-xxxx-xxxx"
+export NOTARIZE_PASSWORD="xxxx-xxxx-xxxx-xxxx"  # App-specific password
 export NOTARIZE_TEAM_ID="YOUR_TEAM_ID"
+
+# Build, sign, and notarize (takes 5-15 minutes)
 make release
 ```
 
-This produces a fully signed and notarized binary that runs without any Gatekeeper warnings.
+**Get app-specific password**: https://appleid.apple.com/account/manage → Sign-In and Security → App-Specific Passwords
 
-**Option 2: Allow Unsigned Binary via System Settings** (Development only)
-
-For local development with unsigned binaries:
-
-1. Try to run the binary (will be blocked):
-   ```bash
-   ./build/bin/claude-code-foundry version
-   ```
-
-2. Open **System Settings** → **Privacy & Security**
-
-3. Scroll to **Security** section
-
-4. Click **"Open Anyway"** next to the block message
-
-5. Try running again - click **"Open"** in the confirmation dialog
-
-#### Understanding the Makefile Build Options
-
-| Target | Signing | Notarization | Speed | Use Case |
-|--------|---------|--------------|-------|----------|
-| `make build` | ❌ No | ❌ No | ⚡ Fast | Local development |
-| `make build-signed` | ✅ Yes | ❌ No | 🐢 Slow | Testing signed builds |
-| `make release` | ✅ Yes | ✅ Yes | 🐌 Very Slow (5-15 min) | Production/distribution |
-
-**Why This Happens:**
-
-macOS Tahoe 16.1+ requires **Apple notarization** for binaries to run without warnings. This is a security feature that:
-- Prevents malware distribution
-- Requires an Apple Developer ID ($99/year)
-- Takes 5-15 minutes per binary (uploaded to Apple's servers)
-- Is necessary for distributing software to other users
-
-For local development, you can use unsigned binaries with System Settings override.
+**Note**: Development builds (`make build`) work without signing or notarization. Signed/notarized builds are only needed for distribution to other users.
 
 ---
 
