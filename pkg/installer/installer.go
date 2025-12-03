@@ -168,7 +168,10 @@ func InstallCategory(category string) error {
 		return fmt.Errorf("failed to load state: %w", err)
 	}
 
-	fmt.Printf("\nInstalling category: %s [%s]\n", category, GetInstallModeDescription())
+	// Clear screen and show banner
+	fmt.Print("\033[H\033[2J") // Clear screen
+	fmt.Println(bannerStyle.Render(banner))
+	fmt.Printf("Installing category: %s [%s]\n", category, GetInstallModeDescription())
 
 	for _, file := range files {
 		if err := InstallFile(file, st); err != nil {
@@ -200,7 +203,10 @@ func InstallType(category, fileType string) error {
 		return fmt.Errorf("failed to load state: %w", err)
 	}
 
-	fmt.Printf("\nInstalling %s from category: %s [%s]\n", fileType, category, GetInstallModeDescription())
+	// Clear screen and show banner
+	fmt.Print("\033[H\033[2J") // Clear screen
+	fmt.Println(bannerStyle.Render(banner))
+	fmt.Printf("Installing %s from category: %s [%s]\n", fileType, category, GetInstallModeDescription())
 
 	for _, file := range files {
 		if err := InstallFile(file, st); err != nil {
@@ -289,7 +295,10 @@ func RemoveCategory(category string) error {
 		return fmt.Errorf("no files installed from category '%s'", category)
 	}
 
-	fmt.Printf("\nRemoving %d files from category: %s [%s]\n", len(installations), category, GetInstallModeDescription())
+	// Clear screen and show banner
+	fmt.Print("\033[H\033[2J") // Clear screen
+	fmt.Println(bannerStyle.Render(banner))
+	fmt.Printf("Removing %d files from category: %s [%s]\n", len(installations), category, GetInstallModeDescription())
 
 	for _, inst := range installations {
 		if err := RemoveInstallation(inst); err != nil {
@@ -318,7 +327,10 @@ func RemoveType(category, fileType string) error {
 		return fmt.Errorf("no %s installed from category '%s'", fileType, category)
 	}
 
-	fmt.Printf("\nRemoving %d %s from category: %s [%s]\n", len(installations), fileType, category, GetInstallModeDescription())
+	// Clear screen and show banner
+	fmt.Print("\033[H\033[2J") // Clear screen
+	fmt.Println(bannerStyle.Render(banner))
+	fmt.Printf("Removing %d %s from category: %s [%s]\n", len(installations), fileType, category, GetInstallModeDescription())
 
 	for _, inst := range installations {
 		if err := RemoveInstallation(inst); err != nil {
@@ -343,12 +355,17 @@ func RemoveAll() error {
 	}
 
 	installations := st.ListInstallations("", "")
+
+	// Clear screen and show banner
+	fmt.Print("\033[H\033[2J") // Clear screen
+	fmt.Println(bannerStyle.Render(banner))
+
 	if len(installations) == 0 {
-		fmt.Println("\nNo files installed by foundry")
+		fmt.Println("No files installed by foundry")
 		return nil
 	}
 
-	fmt.Printf("\nRemoving all %d installed files [%s]\n", len(installations), GetInstallModeDescription())
+	fmt.Printf("Removing all %d installed files [%s]\n", len(installations), GetInstallModeDescription())
 
 	for _, inst := range installations {
 		if err := RemoveInstallation(inst); err != nil {

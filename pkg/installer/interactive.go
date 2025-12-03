@@ -13,10 +13,11 @@ import (
 
 // menuModel represents the state of the menu
 type menuModel struct {
-	prompt   string
-	options  []string
-	selected int
-	canceled bool
+	prompt     string
+	options    []string
+	selected   int
+	canceled   bool
+	showBanner bool // whether to show the banner at the top
 }
 
 // Init implements tea.Model
@@ -49,11 +50,17 @@ func (m menuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // View implements tea.Model
 func (m menuModel) View() string {
-	// ASCII art banner at the top
-	header := bannerStyle.Render(banner)
+	var content string
+
+	// ASCII art banner at the top (only for full-screen menus)
+	if m.showBanner {
+		header := bannerStyle.Render(banner)
+		content = header + "\n"
+	}
 
 	// Styled prompt/title
 	prompt := promptStyle.Render(m.prompt)
+	content += prompt
 
 	// Build menu items with styling
 	var menuItems string
@@ -75,8 +82,8 @@ func (m menuModel) View() string {
 	// Help text at bottom
 	helpText := helpStyle.Render("Navigate: ↑/↓  Select: Enter (↵)  Quit: q")
 
-	// Combine all elements with banner at top
-	content := header + "\n" + prompt + "\n\n" + menuItems + "\n" + helpText
+	// Combine all elements
+	content += "\n\n" + menuItems + "\n" + helpText
 
 	return content
 }
@@ -84,14 +91,41 @@ func (m menuModel) View() string {
 // SelectOption displays an arrow-key navigable menu and returns the selected index
 func SelectOption(prompt string, options []string) (int, error) {
 	m := menuModel{
-		prompt:   prompt,
-		options:  options,
-		selected: 0,
-		canceled: false,
+		prompt:     prompt,
+		options:    options,
+		selected:   0,
+		canceled:   false,
+		showBanner: true, // show banner for full-screen menus
 	}
 
 	// Use alternate screen buffer for clean, full-screen display
 	p := tea.NewProgram(m, tea.WithAltScreen())
+	finalModel, err := p.Run()
+	if err != nil {
+		return -1, fmt.Errorf("error running menu: %w", err)
+	}
+
+	result := finalModel.(menuModel)
+	if result.canceled {
+		return -1, fmt.Errorf("cancelled by user")
+	}
+
+	return result.selected, nil
+}
+
+// SelectOptionInline displays a menu inline (without alt screen) to preserve context
+// Use this when you want to show a menu after printing context that should remain visible
+func SelectOptionInline(prompt string, options []string) (int, error) {
+	m := menuModel{
+		prompt:     prompt,
+		options:    options,
+		selected:   0,
+		canceled:   false,
+		showBanner: false, // no banner for inline menus
+	}
+
+	// Run inline without alternate screen to preserve printed context
+	p := tea.NewProgram(m)
 	finalModel, err := p.Run()
 	if err != nil {
 		return -1, fmt.Errorf("error running menu: %w", err)
@@ -128,11 +162,9 @@ func PromptForLocation() bool {
 	switch selected {
 	case 0:
 		CurrentInstallMode = InstallModeProject
-		fmt.Println("→ Selected: project location (.claude/)")
 		return true
 	case 1:
 		CurrentInstallMode = InstallModeUser
-		fmt.Println("→ Selected: personal location (~/.claude/)")
 		return true
 	default:
 		fmt.Println("Invalid selection. Installation cancelled.")
@@ -228,8 +260,10 @@ func PreviewInstall(category string, fileType string) (bool, error) {
 		})
 	}
 
-	// Display preview
-	fmt.Printf("\nPreview: %s [%s]\n", category, GetInstallModeDescription())
+	// Clear screen and display banner and preview
+	fmt.Print("\033[H\033[2J") // Clear screen
+	fmt.Println(bannerStyle.Render(banner))
+	fmt.Printf("Preview: %s [%s]\n", category, GetInstallModeDescription())
 	fmt.Println()
 
 	installCount := 0
@@ -254,13 +288,13 @@ func PreviewInstall(category string, fileType string) (bool, error) {
 	fmt.Printf("Summary: %d to install, %d to update, %d unchanged\n", installCount, updateCount, skipCount)
 	fmt.Println()
 
-	// Ask for confirmation
+	// Ask for confirmation (use inline menu to preserve preview above)
 	options := []string{
 		"Yes, proceed",
 		"No, cancel",
 	}
 
-	selected, err := SelectOption("Proceed with installation?", options)
+	selected, err := SelectOptionInline("Proceed with installation?", options)
 	if err != nil {
 		return false, err
 	}
@@ -285,11 +319,13 @@ func PreviewRemove(category string, fileType string) (bool, error) {
 		return false, nil
 	}
 
-	// Display preview
+	// Clear screen and display banner and preview
+	fmt.Print("\033[H\033[2J") // Clear screen
+	fmt.Println(bannerStyle.Render(banner))
 	if fileType != "" {
-		fmt.Printf("\nPreview: Remove %s from %s [%s]\n", fileType, category, GetInstallModeDescription())
+		fmt.Printf("Preview: Remove %s from %s [%s]\n", fileType, category, GetInstallModeDescription())
 	} else {
-		fmt.Printf("\nPreview: Remove category %s [%s]\n", category, GetInstallModeDescription())
+		fmt.Printf("Preview: Remove category %s [%s]\n", category, GetInstallModeDescription())
 	}
 	fmt.Println()
 
@@ -306,13 +342,13 @@ func PreviewRemove(category string, fileType string) (bool, error) {
 	fmt.Printf("Summary: %d files will be removed\n", len(installations))
 	fmt.Println()
 
-	// Ask for confirmation
+	// Ask for confirmation (use inline menu to preserve preview above)
 	options := []string{
 		"Yes, remove",
 		"No, cancel",
 	}
 
-	selected, err := SelectOption("Proceed with removal?", options)
+	selected, err := SelectOptionInline("Proceed with removal?", options)
 	if err != nil {
 		return false, err
 	}
