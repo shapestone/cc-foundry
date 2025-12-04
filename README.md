@@ -73,9 +73,18 @@ For local development and testing:
 # Fast build without code signing
 make build
 
-# Install binary
+# Install to $GOPATH/bin (no sudo required)
 make install
+
+# Or install globally (requires sudo password)
+make install GLOBAL=1
 ```
+
+**Installation locations:**
+- **Default**: `$GOPATH/bin/claude-code-foundry` (typically `~/go/bin`) - No sudo required
+- **Global**: `/usr/local/bin/claude-code-foundry` - Requires sudo, available to all users
+
+The installer will check if `$GOPATH/bin` is in your PATH and provide instructions if needed.
 
 ### Verify Installation
 
@@ -723,8 +732,11 @@ make test
 # Build locally
 make build
 
-# Install development version
+# Install development version to $GOPATH/bin (no sudo)
 make install
+
+# Or install globally (requires sudo)
+make install GLOBAL=1
 ```
 
 ---

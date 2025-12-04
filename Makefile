@@ -262,27 +262,52 @@ vet: ## Run go vet
 validate: deps lint test ## Run all validation checks
 
 # Installation
+# Use GLOBAL=1 to install system-wide (requires sudo)
+# Default: installs to $GOPATH/bin (no sudo)
 .PHONY: install
-install: build ## Install to /usr/local/bin
-	@echo "Installing $(PROJECT_NAME) to $(INSTALL_DIR)..."
+install: ## Install (default: $GOPATH/bin, use GLOBAL=1 for /usr/local/bin)
 	@if [ "$(DETECTED_OS)" = "Windows" ]; then \
 		echo "Please manually copy $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT) to your PATH"; \
-	else \
+	elif [ "$(GLOBAL)" = "1" ]; then \
+		echo "Installing $(PROJECT_NAME) to $(INSTALL_DIR) (global)..."; \
 		sudo cp $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT) $(INSTALL_DIR)/; \
 		sudo chmod +x $(INSTALL_DIR)/$(PROJECT_NAME)$(EXE_EXT); \
 		echo "✓ Installed to $(INSTALL_DIR)/$(PROJECT_NAME)"; \
-		echo ""; \
-		echo "Run: $(PROJECT_NAME) --help"; \
+	else \
+		echo "Installing $(PROJECT_NAME)..."; \
+		go install ./$(CMD_DIR); \
+		GOPATH=$${GOPATH:-$$HOME/go}; \
+		echo "✓ Installed to $$GOPATH/bin/$(PROJECT_NAME)"; \
+		if ! echo "$$PATH" | grep -q "$$GOPATH/bin"; then \
+			echo ""; \
+			echo "⚠️  $$GOPATH/bin is not in your PATH. Add it with:"; \
+			if [ -f ~/.zshrc ]; then \
+				echo "  echo 'export PATH=\"\$$GOPATH/bin:\$$PATH\"' >> ~/.zshrc"; \
+				echo "  source ~/.zshrc"; \
+			elif [ -f ~/.bashrc ]; then \
+				echo "  echo 'export PATH=\"\$$GOPATH/bin:\$$PATH\"' >> ~/.bashrc"; \
+				echo "  source ~/.bashrc"; \
+			else \
+				echo "  export PATH=\"\$$GOPATH/bin:\$$PATH\""; \
+			fi; \
+		fi; \
 	fi
+	@echo ""
+	@echo "Run: $(PROJECT_NAME) --help"
 
 .PHONY: uninstall
-uninstall: ## Remove from /usr/local/bin
-	@echo "Removing $(PROJECT_NAME) from $(INSTALL_DIR)..."
+uninstall: ## Uninstall (use GLOBAL=1 to remove from /usr/local/bin)
 	@if [ "$(DETECTED_OS)" = "Windows" ]; then \
 		echo "Please manually remove $(PROJECT_NAME)$(EXE_EXT) from your PATH"; \
-	else \
+	elif [ "$(GLOBAL)" = "1" ]; then \
+		echo "Removing $(PROJECT_NAME) from $(INSTALL_DIR)..."; \
 		sudo rm -f $(INSTALL_DIR)/$(PROJECT_NAME); \
-		echo "✓ Uninstalled"; \
+		echo "✓ Uninstalled from $(INSTALL_DIR)"; \
+	else \
+		GOPATH=$${GOPATH:-$$HOME/go}; \
+		echo "Removing $(PROJECT_NAME) from $$GOPATH/bin..."; \
+		rm -f $$GOPATH/bin/$(PROJECT_NAME); \
+		echo "✓ Uninstalled from $$GOPATH/bin"; \
 	fi
 
 # Cleanup
