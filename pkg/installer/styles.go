@@ -50,6 +50,11 @@ var normalItemStyle = lipgloss.NewStyle().
 	Foreground(colorSecondary).
 	Padding(0, 1)
 
+// Disabled menu item style
+var disabledItemStyle = lipgloss.NewStyle().
+	Foreground(colorMuted).
+	Padding(0, 1)
+
 // Cursor style - colored arrow
 var cursorStyle = lipgloss.NewStyle().
 	Foreground(colorHighlight).

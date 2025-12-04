@@ -9,7 +9,6 @@ import (
 	"github.com/shapestone/claude-code-foundry/pkg/doctor"
 	embedpkg "github.com/shapestone/claude-code-foundry/pkg/embed"
 	"github.com/shapestone/claude-code-foundry/pkg/installer"
-	"github.com/shapestone/claude-code-foundry/pkg/state"
 )
 
 const version = "1.0.0"
@@ -178,50 +177,44 @@ func handleRemoveInteractive() {
 		return
 	}
 
-	// Prompt for location
-	if !installer.PromptForLocation() {
+	// Intelligently prompt for location (or auto-select if only one has files)
+	// For "all" categories, pass empty string to check all categories
+	categoryForCheck := category
+	if category == "all" {
+		categoryForCheck = ""
+	}
+	if !installer.PromptForLocationForRemoval(categoryForCheck, "") {
 		return
 	}
 
 	// Handle remove all
 	if category == "all" {
-		st, err := state.Load()
+		categories, err := embedpkg.ListCategories()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Error listing categories: %v\n", err)
 			return
 		}
 
-		installations := st.ListInstallations("", "")
-		if len(installations) == 0 {
-			fmt.Println("\nNo files installed by foundry")
-			return
-		}
-
-		fmt.Printf("\nPreview: Remove all installed files [%s]\n", installer.GetInstallModeDescription())
-		fmt.Println()
-
-		for _, inst := range installations {
-			displayPath := inst.InstalledPath
-			if home, err := os.UserHomeDir(); err == nil {
-				displayPath = strings.Replace(inst.InstalledPath, home, "~", 1)
+		for _, cat := range categories {
+			proceed, err := installer.PreviewRemove(cat, "")
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				installer.WaitForKey()
+				return
 			}
-			typeLabel := strings.TrimSuffix(inst.Type, "s")
-			fmt.Printf("  - %s: %s\n", typeLabel, displayPath)
-		}
 
-		fmt.Println()
-		fmt.Printf("Summary: %d files will be removed\n", len(installations))
-		fmt.Println()
+			if !proceed {
+				fmt.Println("Removal cancelled.")
+				return
+			}
 
-		if !installer.ConfirmAction("Proceed with removal?") {
-			fmt.Println("Removal cancelled.")
-			return
+			if err := installer.RemoveCategory(cat); err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				installer.WaitForKey()
+				return
+			}
 		}
-
-		if err := installer.RemoveAll(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			return
-		}
+		installer.WaitForKey()
 		return
 	}
 
@@ -229,6 +222,7 @@ func handleRemoveInteractive() {
 	proceed, err := installer.PreviewRemove(category, "")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		installer.WaitForKey()
 		return
 	}
 
@@ -239,8 +233,10 @@ func handleRemoveInteractive() {
 
 	if err := installer.RemoveCategory(category); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		installer.WaitForKey()
 		return
 	}
+	installer.WaitForKey()
 }
 
 // handleDoctor runs the doctor diagnostics

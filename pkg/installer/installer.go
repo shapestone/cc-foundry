@@ -230,6 +230,87 @@ func GetInstallModeDescription() string {
 	return "user-level (~/.claude/)"
 }
 
+// pathMatchesInstallMode checks if an installation path matches the current install mode
+func pathMatchesInstallMode(installPath string) bool {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return false
+	}
+
+	userClaudePath := filepath.Join(home, ".claude")
+	cwd, err := os.Getwd()
+	if err != nil {
+		return false
+	}
+	projectClaudePath := filepath.Join(cwd, ".claude")
+
+	if CurrentInstallMode == InstallModeUser {
+		// User mode: path must be under ~/.claude/
+		return strings.HasPrefix(installPath, userClaudePath)
+	}
+
+	// Project mode: path must be under current-dir/.claude/
+	return strings.HasPrefix(installPath, projectClaudePath)
+}
+
+// ListInstallationsForCurrentMode filters installations by current install mode
+func ListInstallationsForCurrentMode(st *state.State, category, fileType string) []state.Installation {
+	allInstallations := st.ListInstallations(category, fileType)
+	var filtered []state.Installation
+
+	for _, inst := range allInstallations {
+		if pathMatchesInstallMode(inst.InstalledPath) {
+			filtered = append(filtered, inst)
+		}
+	}
+
+	return filtered
+}
+
+// LocationAvailability indicates which locations have files for a category
+type LocationAvailability struct {
+	HasUserLevel    bool
+	HasProjectLevel bool
+	UserCount       int
+	ProjectCount    int
+}
+
+// CheckLocationAvailability checks which locations have files for a category
+func CheckLocationAvailability(category, fileType string) (LocationAvailability, error) {
+	st, err := state.Load()
+	if err != nil {
+		return LocationAvailability{}, fmt.Errorf("failed to load state: %w", err)
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return LocationAvailability{}, fmt.Errorf("failed to get home directory: %w", err)
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return LocationAvailability{}, fmt.Errorf("failed to get working directory: %w", err)
+	}
+
+	allInstallations := st.ListInstallations(category, fileType)
+
+	var result LocationAvailability
+	userClaudePath := filepath.Join(home, ".claude")
+	projectClaudePath := filepath.Join(cwd, ".claude")
+
+	for _, inst := range allInstallations {
+		if strings.HasPrefix(inst.InstalledPath, userClaudePath) {
+			result.HasUserLevel = true
+			result.UserCount++
+		} else if strings.HasPrefix(inst.InstalledPath, projectClaudePath) {
+			result.HasProjectLevel = true
+			result.ProjectCount++
+		}
+	}
+
+	return result, nil
+}
+
 // InstallAll installs all files from all categories
 func InstallAll() error {
 	categories, err := embedpkg.ListCategories()
@@ -290,9 +371,10 @@ func RemoveCategory(category string) error {
 		return fmt.Errorf("failed to load state: %w", err)
 	}
 
-	installations := st.ListInstallations(category, "")
+	installations := ListInstallationsForCurrentMode(st, category, "")
 	if len(installations) == 0 {
-		return fmt.Errorf("no files installed from category '%s'", category)
+		// No files to remove - skip silently
+		return nil
 	}
 
 	// Clear screen and show banner
@@ -322,9 +404,10 @@ func RemoveType(category, fileType string) error {
 		return fmt.Errorf("failed to load state: %w", err)
 	}
 
-	installations := st.ListInstallations(category, fileType)
+	installations := ListInstallationsForCurrentMode(st, category, fileType)
 	if len(installations) == 0 {
-		return fmt.Errorf("no %s installed from category '%s'", fileType, category)
+		// No files to remove - skip silently
+		return nil
 	}
 
 	// Clear screen and show banner
@@ -354,7 +437,7 @@ func RemoveAll() error {
 		return fmt.Errorf("failed to load state: %w", err)
 	}
 
-	installations := st.ListInstallations("", "")
+	installations := ListInstallationsForCurrentMode(st, "", "")
 
 	// Clear screen and show banner
 	fmt.Print("\033[H\033[2J") // Clear screen

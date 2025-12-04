@@ -15,6 +15,7 @@ import (
 type menuModel struct {
 	prompt     string
 	options    []string
+	disabled   []bool // whether each option is disabled
 	selected   int
 	canceled   bool
 	showBanner bool // whether to show the banner at the top
@@ -34,15 +35,30 @@ func (m menuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.canceled = true
 			return m, tea.Quit
 		case "up", "k":
-			if m.selected > 0 {
-				m.selected--
+			// Move up, skipping disabled items
+			newSelected := m.selected - 1
+			for newSelected >= 0 {
+				if len(m.disabled) == 0 || !m.disabled[newSelected] {
+					m.selected = newSelected
+					break
+				}
+				newSelected--
 			}
 		case "down", "j":
-			if m.selected < len(m.options)-1 {
-				m.selected++
+			// Move down, skipping disabled items
+			newSelected := m.selected + 1
+			for newSelected < len(m.options) {
+				if len(m.disabled) == 0 || !m.disabled[newSelected] {
+					m.selected = newSelected
+					break
+				}
+				newSelected++
 			}
 		case "enter":
-			return m, tea.Quit
+			// Don't allow selecting disabled items
+			if len(m.disabled) == 0 || !m.disabled[m.selected] {
+				return m, tea.Quit
+			}
 		}
 	}
 	return m, nil
@@ -66,8 +82,12 @@ func (m menuModel) View() string {
 	var menuItems string
 	for i, option := range m.options {
 		var line string
+		isDisabled := len(m.disabled) > 0 && m.disabled[i]
 
-		if i == m.selected {
+		if isDisabled {
+			// Disabled item: grayed out, no cursor
+			line = "  " + disabledItemStyle.Render(option)
+		} else if i == m.selected {
 			// Selected item: highlighted with styled cursor
 			cursor := cursorStyle.Render("❯ ")
 			line = cursor + selectedItemStyle.Render(option)
@@ -90,10 +110,27 @@ func (m menuModel) View() string {
 
 // SelectOption displays an arrow-key navigable menu and returns the selected index
 func SelectOption(prompt string, options []string) (int, error) {
+	return SelectOptionWithDisabled(prompt, options, nil)
+}
+
+// SelectOptionWithDisabled displays a menu with some options disabled
+func SelectOptionWithDisabled(prompt string, options []string, disabled []bool) (int, error) {
+	// Find first non-disabled item to select initially
+	initialSelected := 0
+	if disabled != nil {
+		for i := range options {
+			if !disabled[i] {
+				initialSelected = i
+				break
+			}
+		}
+	}
+
 	m := menuModel{
 		prompt:     prompt,
 		options:    options,
-		selected:   0,
+		disabled:   disabled,
+		selected:   initialSelected,
 		canceled:   false,
 		showBanner: true, // show banner for full-screen menus
 	}
@@ -170,6 +207,70 @@ func PromptForLocation() bool {
 		fmt.Println("Invalid selection. Installation cancelled.")
 		return false
 	}
+}
+
+// PromptForLocationForRemoval intelligently prompts for location based on what's available
+// Returns true to proceed, false to cancel or nothing to remove
+func PromptForLocationForRemoval(category, fileType string) bool {
+	avail, err := CheckLocationAvailability(category, fileType)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error checking locations: %v\n", err)
+		return false
+	}
+
+	// No files in either location
+	if !avail.HasUserLevel && !avail.HasProjectLevel {
+		if fileType != "" {
+			fmt.Printf("\nNo %s installed from category '%s'\n", fileType, category)
+		} else if category != "" {
+			fmt.Printf("\nNo files installed from category '%s'\n", category)
+		} else {
+			fmt.Println("\nNo files installed by foundry")
+		}
+		return false
+	}
+
+	// Always show both locations, disable the ones with 0 files
+	fmt.Println()
+	options := []string{
+		fmt.Sprintf("Project (.claude/) - %d files", avail.ProjectCount),
+		fmt.Sprintf("Personal (~/.claude/) - %d files", avail.UserCount),
+		"← Cancel",
+	}
+
+	disabled := []bool{
+		!avail.HasProjectLevel, // Disable if no project files
+		!avail.HasUserLevel,    // Disable if no user files
+		false,                  // Cancel is always enabled
+	}
+
+	// Map option indices to install modes
+	modeMap := []InstallMode{
+		InstallModeProject,
+		InstallModeUser,
+	}
+
+	prompt := "Confirm location to remove from:"
+
+	selected, err := SelectOptionWithDisabled(prompt, options, disabled)
+	if err != nil {
+		if err.Error() == "cancelled by user" {
+			fmt.Println("Removal cancelled.")
+		} else {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		}
+		return false
+	}
+
+	// Check if cancel was selected
+	if selected >= len(modeMap) {
+		fmt.Println("Removal cancelled.")
+		return false
+	}
+
+	// Set the selected mode
+	CurrentInstallMode = modeMap[selected]
+	return true
 }
 
 // PreviewChange represents a single file change to preview
@@ -309,14 +410,10 @@ func PreviewRemove(category string, fileType string) (bool, error) {
 		return false, fmt.Errorf("failed to load state: %w", err)
 	}
 
-	installations := st.ListInstallations(category, fileType)
+	installations := ListInstallationsForCurrentMode(st, category, fileType)
 	if len(installations) == 0 {
-		if fileType != "" {
-			fmt.Printf("\nNo %s installed from category '%s'\n", fileType, category)
-		} else {
-			fmt.Printf("\nNo files installed from category '%s'\n", category)
-		}
-		return false, nil
+		// No files to remove - skip preview and return true to continue
+		return true, nil
 	}
 
 	// Clear screen and display banner and preview

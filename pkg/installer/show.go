@@ -358,15 +358,34 @@ func buildInstalledFilesNode() (*treeNode, error) {
 		return nil, nil
 	}
 
+	// Separate installations by location
+	home, _ := os.UserHomeDir()
+	cwd, _ := os.Getwd()
+
+	var userLevelInsts []state.Installation
+	var projectLevelInsts []state.Installation
+
+	for _, inst := range st.Installations {
+		if strings.HasPrefix(inst.InstalledPath, filepath.Join(home, ".claude")) {
+			userLevelInsts = append(userLevelInsts, inst)
+		} else if strings.HasPrefix(inst.InstalledPath, filepath.Join(cwd, ".claude")) {
+			projectLevelInsts = append(projectLevelInsts, inst)
+		}
+	}
+
+	userCount := len(userLevelInsts)
+	projectCount := len(projectLevelInsts)
+
 	// Create root node for installed files
+	rootLabel := fmt.Sprintf("📦 Installed Files: %d user-level, %d project-level", userCount, projectCount)
 	rootNode := &treeNode{
-		label:    "📦 Installed Files Managed by Foundry",
+		label:    rootLabel,
 		isDir:    true,
 		expanded: false,
 		depth:    0,
 	}
 
-	// Group installations by category
+	// Group installations by category (combining both locations)
 	byCategory := make(map[string][]state.Installation)
 	for _, inst := range st.Installations {
 		byCategory[inst.Category] = append(byCategory[inst.Category], inst)
