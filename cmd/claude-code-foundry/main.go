@@ -13,6 +13,12 @@ import (
 
 const version = "1.0.0"
 
+// Build information - set via ldflags during build
+var (
+	buildTime = "unknown"
+	commit    = "unknown"
+)
+
 func init() {
 	// Set the embedded filesystem for the embed package to use
 	embedpkg.CategoriesFS = embeddata.Categories
@@ -50,7 +56,7 @@ func runInteractiveMode() {
 		case installer.MainMenuDoctor:
 			handleDoctor()
 		case installer.MainMenuVersion:
-			fmt.Printf("\nclaude-code-foundry v%s\n", version)
+			showVersion()
 			installer.WaitForKey()
 		case installer.MainMenuHelp:
 			printUsage()
@@ -256,10 +262,18 @@ func handleDoctor() {
 	}
 }
 
-func printUsage() {
-	fmt.Println(`🔧 claude-code-foundry - Manage Claude Code files
+// showVersion displays version information with banner
+func showVersion() {
+	installer.ShowBanner()
+	fmt.Printf("Version:    %s\n", version)
+	fmt.Printf("Build Time: %s\n", buildTime)
+	fmt.Printf("Commit:     %s\n", commit)
+	fmt.Println()
+}
 
-Interactive Mode:
+func printUsage() {
+	installer.ShowBanner()
+	fmt.Println(`Interactive Mode:
   Just run: claude-code-foundry
 
   The tool will guide you through an interactive menu to:

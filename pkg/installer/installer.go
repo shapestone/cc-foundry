@@ -230,6 +230,12 @@ func GetInstallModeDescription() string {
 	return "user-level (~/.claude/)"
 }
 
+// ShowBanner displays the application banner with screen clear
+func ShowBanner() {
+	fmt.Print("\033[H\033[2J") // Clear screen
+	fmt.Println(bannerStyle.Render(banner))
+}
+
 // pathMatchesInstallMode checks if an installation path matches the current install mode
 func pathMatchesInstallMode(installPath string) bool {
 	home, err := os.UserHomeDir()
