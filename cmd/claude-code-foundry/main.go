@@ -247,9 +247,12 @@ func handleRemoveInteractive() {
 
 // handleDoctor runs the doctor diagnostics
 func handleDoctor() {
+	installer.ShowBanner()
+
 	report, err := doctor.Run()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error running doctor: %v\n", err)
+		installer.WaitForKey()
 		return
 	}
 
@@ -258,8 +261,11 @@ func handleDoctor() {
 	// Offer to fix issues
 	if err := doctor.OfferFixes(report, installer.SelectOption); err != nil {
 		fmt.Fprintf(os.Stderr, "Error offering fixes: %v\n", err)
+		installer.WaitForKey()
 		return
 	}
+
+	installer.WaitForKey()
 }
 
 // showVersion displays version information with banner

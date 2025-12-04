@@ -36,25 +36,29 @@ type HealthReport struct {
 func Run() (*HealthReport, error) {
 	report := &HealthReport{}
 
-	fmt.Println("\n🏥 Running doctor diagnostics...\n")
+	fmt.Println("🏥 Running doctor diagnostics...")
+	fmt.Println()
 
 	// 1. Verify ~/.claude.json
-	fmt.Println("Checking Claude Code configuration...")
 	if err := checkClaudeConfig(report); err != nil {
+		fmt.Println("✗ Checking Claude Code configuration (~/.claude.json)")
 		return report, err
 	}
+	fmt.Println("✓ Checking Claude Code configuration (~/.claude.json)")
 
 	// 2. Check file integrity
-	fmt.Println("Checking installed file integrity...")
 	if err := checkFileIntegrity(report); err != nil {
+		fmt.Println("✗ Checking foundry-managed files")
 		return report, err
 	}
+	fmt.Printf("✓ Checking foundry-managed files (%d files)\n", report.FilesChecked)
 
 	// 3. Detect conflicts
-	fmt.Println("Detecting conflicts...")
 	if err := detectConflicts(report); err != nil {
+		fmt.Println("✗ Detecting orphaned and conflicting files")
 		return report, err
 	}
+	fmt.Println("✓ Detecting orphaned and conflicting files")
 
 	fmt.Println()
 	return report, nil
