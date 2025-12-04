@@ -305,7 +305,7 @@ make test           # Run tests
 make lint           # Run linters
 make format         # Format code
 make clean          # Clean build artifacts
-make install        # Install binary to /usr/local/bin
+make install        # Install binary to $GOPATH/bin (use GLOBAL=1 for /usr/local/bin)
 ```
 
 ### Debugging
