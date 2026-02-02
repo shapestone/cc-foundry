@@ -1,9 +1,9 @@
 package installer
 
 import (
-	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -31,7 +31,7 @@ func (m menuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c", "q":
+		case "ctrl+c", "esc":
 			m.canceled = true
 			return m, tea.Quit
 		case "up", "k":
@@ -100,7 +100,7 @@ func (m menuModel) View() string {
 	}
 
 	// Help text at bottom
-	helpText := helpStyle.Render("Navigate: ↑/↓  Select: Enter (↵)  Quit: q")
+	helpText := helpStyle.Render("Navigate: ↑/↓  Select: Enter (↵)  Back: Esc")
 
 	// Combine all elements
 	content += "\n\n" + menuItems + "\n" + helpText
@@ -111,6 +111,34 @@ func (m menuModel) View() string {
 // SelectOption displays an arrow-key navigable menu and returns the selected index
 func SelectOption(prompt string, options []string) (int, error) {
 	return SelectOptionWithDisabled(prompt, options, nil)
+}
+
+// SelectOptionAt displays a menu with a pre-selected cursor position
+func SelectOptionAt(prompt string, options []string, initialSelected int) (int, error) {
+	if initialSelected < 0 || initialSelected >= len(options) {
+		initialSelected = 0
+	}
+
+	m := menuModel{
+		prompt:     prompt,
+		options:    options,
+		selected:   initialSelected,
+		canceled:   false,
+		showBanner: true,
+	}
+
+	p := tea.NewProgram(m, tea.WithAltScreen())
+	finalModel, err := p.Run()
+	if err != nil {
+		return -1, fmt.Errorf("error running menu: %w", err)
+	}
+
+	result := finalModel.(menuModel)
+	if result.canceled {
+		return -1, fmt.Errorf("cancelled by user")
+	}
+
+	return result.selected, nil
 }
 
 // SelectOptionWithDisabled displays a menu with some options disabled
@@ -199,6 +227,17 @@ func PromptForLocation() bool {
 	switch selected {
 	case 0:
 		CurrentInstallMode = InstallModeProject
+		cwd, err := os.Getwd()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: failed to get current directory: %v\n", err)
+			return false
+		}
+		claudeDir := filepath.Join(cwd, ".claude")
+		if _, err := os.Stat(claudeDir); os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr, "\nNo .claude/ directory found in %s\n", cwd)
+			fmt.Fprintf(os.Stderr, "Project-level installs require an existing Claude Code project directory.\n")
+			return false
+		}
 		return true
 	case 1:
 		CurrentInstallMode = InstallModeUser
@@ -453,9 +492,25 @@ func PreviewRemove(category string, fileType string) (bool, error) {
 	return selected == 0, nil
 }
 
-// WaitForKey waits for the user to press any key to continue
+// waitModel is a simple Bubble Tea model that waits for any key press
+type waitModel struct{}
+
+func (m waitModel) Init() tea.Cmd { return nil }
+
+func (m waitModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg.(type) {
+	case tea.KeyMsg:
+		return m, tea.Quit
+	}
+	return m, nil
+}
+
+func (m waitModel) View() string {
+	return "\n" + helpStyle.Render("Back: Esc") + "\n"
+}
+
+// WaitForKey displays a styled prompt and waits for any key press to continue
 func WaitForKey() {
-	fmt.Print("\nPress Enter to continue...")
-	reader := bufio.NewReader(os.Stdin)
-	reader.ReadString('\n')
+	p := tea.NewProgram(waitModel{})
+	p.Run()
 }

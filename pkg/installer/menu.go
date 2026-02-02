@@ -21,12 +21,13 @@ const (
 )
 
 // ShowMainMenu displays the main interactive menu and returns the selected option
-func ShowMainMenu() (MainMenuOption, error) {
+// lastSelected is the index to pre-select (for cursor memory)
+func ShowMainMenu(lastSelected int) (MainMenuOption, int, error) {
 	fmt.Println("\n🔧 cc-foundry - Manage Claude Code files\n")
 
 	options := []string{
 		"Show directory structure",
-		"List available files",
+		"List installable files",
 		"Install files",
 		"Remove files",
 		"Doctor (verify & repair)",
@@ -35,34 +36,34 @@ func ShowMainMenu() (MainMenuOption, error) {
 		"Exit",
 	}
 
-	selected, err := SelectOption("What would you like to do?", options)
+	selected, err := SelectOptionAt("What would you like to do?", options, lastSelected)
 	if err != nil {
 		if err.Error() == "cancelled by user" {
-			return MainMenuExit, nil
+			return MainMenuExit, lastSelected, nil
 		}
-		return "", err
+		return "", 0, err
 	}
 
 	// Map selection to menu option
 	switch selected {
 	case 0:
-		return MainMenuShow, nil
+		return MainMenuShow, selected, nil
 	case 1:
-		return MainMenuList, nil
+		return MainMenuList, selected, nil
 	case 2:
-		return MainMenuInstall, nil
+		return MainMenuInstall, selected, nil
 	case 3:
-		return MainMenuRemove, nil
+		return MainMenuRemove, selected, nil
 	case 4:
-		return MainMenuDoctor, nil
+		return MainMenuDoctor, selected, nil
 	case 5:
-		return MainMenuVersion, nil
+		return MainMenuVersion, selected, nil
 	case 6:
-		return MainMenuHelp, nil
+		return MainMenuHelp, selected, nil
 	case 7:
-		return MainMenuExit, nil
+		return MainMenuExit, selected, nil
 	default:
-		return "", fmt.Errorf("invalid selection")
+		return "", 0, fmt.Errorf("invalid selection")
 	}
 }
 
@@ -107,9 +108,6 @@ func ShowCategoryMenu(action string) (string, error) {
 		options = append([]string{"All categories"}, options...)
 	}
 
-	// Add "Back" option
-	options = append(options, "← Back to main menu")
-
 	prompt := fmt.Sprintf("Select category to %s", action)
 	selected, err := SelectOption(prompt, options)
 	if err != nil {
@@ -122,12 +120,6 @@ func ShowCategoryMenu(action string) (string, error) {
 	// Handle "All categories" selection
 	if (action == "install" || action == "remove") && selected == 0 {
 		return "all", nil
-	}
-
-	// Handle "Back" selection
-	backIndex := len(options) - 1
-	if selected == backIndex {
-		return "", nil
 	}
 
 	// Adjust index if "All categories" was added
@@ -150,7 +142,6 @@ func ShowTypeMenu() (string, error) {
 		"Agents",
 		"Skills",
 		"All types",
-		"← Back",
 	}
 
 	selected, err := SelectOption("Select file type", options)
@@ -170,8 +161,6 @@ func ShowTypeMenu() (string, error) {
 		return "skills", nil
 	case 3:
 		return "", nil // Empty string means all types
-	case 4:
-		return "", nil // Back
 	default:
 		return "", fmt.Errorf("invalid selection")
 	}

@@ -38,7 +38,7 @@ cc-foundry helps teams maintain consistent Claude Code configurations by providi
 - 🔄 **Install/Upgrade/Remove** - Manage files at category or type level
 - 🔍 **Smart conflict detection** - Prevents overwriting user files with unique naming
 - 🛡️ **Transactional operations** - Automatic rollback on failure with backup/restore
-- 📊 **List and discover** - Browse available categories and their contents
+- 📊 **List and discover** - Browse installable files organized by category
 
 ### Experimental Features
 - 🩺 **Doctor command** - Clean bloated `~/.claude.json` files and verify installation integrity
@@ -132,7 +132,7 @@ You'll see a main menu with arrow-key navigation:
 
 What would you like to do?
 ❯ Show directory structure
-  List available files
+  List installable files
   Install files
   Remove files
   Doctor (verify & repair)
@@ -169,9 +169,9 @@ Project-level (.claude/):
   Total: 5 files installed
 ```
 
-#### 2. List Available Files
+#### 2. List Installable Files
 
-Browse available categories and their contents:
+Browse files that CC Foundry can install, organized by category:
 
 1. Select category from list:
    ```

@@ -37,12 +37,15 @@ func main() {
 }
 
 func runInteractiveMode() {
+	lastSelected := 0
 	for {
-		option, err := installer.ShowMainMenu()
+		option, selected, err := installer.ShowMainMenu(lastSelected)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
+
+		lastSelected = selected
 
 		switch option {
 		case installer.MainMenuShow:
@@ -350,6 +353,8 @@ func listAll() {
 }
 
 func listCategory(category string) {
+	installer.ShowBanner()
+
 	files, err := embedpkg.ListCategoryFiles(category)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error listing category '%s': %v\n", category, err)
@@ -361,7 +366,7 @@ func listCategory(category string) {
 		return
 	}
 
-	fmt.Printf("\nCategory: %s\n\n", category)
+	fmt.Printf("Category: %s\n\n", category)
 
 	// Group by type
 	byType := make(map[string][]string)

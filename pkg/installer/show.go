@@ -36,7 +36,7 @@ func (m treeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "q", "esc":
+		case "ctrl+c", "esc":
 			return m, tea.Quit
 		case "up", "k":
 			if m.cursor > 0 {
@@ -140,7 +140,7 @@ func (m treeModel) View() string {
 	}
 
 	// Styled help text at bottom
-	help := helpStyle.Render("Navigate: ↑/↓  Expand: →  Collapse: ←  Quit: q")
+	help := helpStyle.Render("Navigate: ↑/↓  Expand: →  Collapse: ←  Back: Esc")
 	sb.WriteString("\n")
 	sb.WriteString(help)
 	sb.WriteString("\n")
@@ -196,7 +196,12 @@ func buildTree() ([]*treeNode, error) {
 	nodes = append(nodes, userNode)
 
 	// Project-level directory
-	projectNode, err := buildLocationNode("📂 Project-level (.claude/)", false, 0)
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get working directory: %w", err)
+	}
+	projectLabel := fmt.Sprintf("📂 Project-level (%s/.claude/)", cwd)
+	projectNode, err := buildLocationNode(projectLabel, false, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -251,7 +256,10 @@ func buildLocationNode(label string, isUser bool, depth int) (*treeNode, error) 
 
 	// Check if directory exists
 	if _, err := os.Stat(basePath); os.IsNotExist(err) {
-		// Directory doesn't exist, but still create the node
+		if !isUser {
+			node.label += " - No Claude Code project directory found"
+			node.isDir = false // Not navigable when directory doesn't exist
+		}
 		return node, nil
 	}
 
