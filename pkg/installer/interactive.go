@@ -209,12 +209,33 @@ func SelectOptionInline(prompt string, options []string) (int, error) {
 func PromptForLocation() bool {
 	fmt.Println()
 
-	options := []string{
-		"1. Project (.claude/)",
-		"2. Personal (~/.claude/)",
+	cwd, err := os.Getwd()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to get current directory: %v\n", err)
+		return false
+	}
+	claudeDir := filepath.Join(cwd, ".claude")
+	projectExists := true
+	if _, err := os.Stat(claudeDir); os.IsNotExist(err) {
+		projectExists = false
 	}
 
-	selected, err := SelectOption("Choose location", options)
+	projectLabel := fmt.Sprintf("Project (%s/.claude/)", cwd)
+	if !projectExists {
+		projectLabel += " - No Claude Code project directory found"
+	}
+
+	options := []string{
+		"User (~/.claude/)",
+		projectLabel,
+	}
+
+	disabled := []bool{
+		false,
+		!projectExists,
+	}
+
+	selected, err := SelectOptionWithDisabled("Choose location", options, disabled)
 	if err != nil {
 		if err.Error() == "cancelled by user" {
 			fmt.Println("Installation cancelled.")
@@ -226,21 +247,10 @@ func PromptForLocation() bool {
 
 	switch selected {
 	case 0:
-		CurrentInstallMode = InstallModeProject
-		cwd, err := os.Getwd()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: failed to get current directory: %v\n", err)
-			return false
-		}
-		claudeDir := filepath.Join(cwd, ".claude")
-		if _, err := os.Stat(claudeDir); os.IsNotExist(err) {
-			fmt.Fprintf(os.Stderr, "\nNo .claude/ directory found in %s\n", cwd)
-			fmt.Fprintf(os.Stderr, "Project-level installs require an existing Claude Code project directory.\n")
-			return false
-		}
+		CurrentInstallMode = InstallModeUser
 		return true
 	case 1:
-		CurrentInstallMode = InstallModeUser
+		CurrentInstallMode = InstallModeProject
 		return true
 	default:
 		fmt.Println("Invalid selection. Installation cancelled.")
@@ -271,22 +281,21 @@ func PromptForLocationForRemoval(category, fileType string) bool {
 
 	// Always show both locations, disable the ones with 0 files
 	fmt.Println()
+	cwd, _ := os.Getwd()
 	options := []string{
-		fmt.Sprintf("Project (.claude/) - %d files", avail.ProjectCount),
-		fmt.Sprintf("Personal (~/.claude/) - %d files", avail.UserCount),
-		"← Cancel",
+		fmt.Sprintf("User (~/.claude/) - %d files", avail.UserCount),
+		fmt.Sprintf("Project (%s/.claude/) - %d files", cwd, avail.ProjectCount),
 	}
 
 	disabled := []bool{
-		!avail.HasProjectLevel, // Disable if no project files
 		!avail.HasUserLevel,    // Disable if no user files
-		false,                  // Cancel is always enabled
+		!avail.HasProjectLevel, // Disable if no project files
 	}
 
 	// Map option indices to install modes
 	modeMap := []InstallMode{
-		InstallModeProject,
 		InstallModeUser,
+		InstallModeProject,
 	}
 
 	prompt := "Confirm location to remove from:"
@@ -326,7 +335,12 @@ func PreviewInstall(category string, fileType string) (bool, error) {
 	var files []embedpkg.CategoryFile
 	var err error
 
-	if fileType != "" {
+	if category == "" {
+		files, err = embedpkg.ListAllFiles()
+		if err != nil {
+			return false, fmt.Errorf("failed to list files: %w", err)
+		}
+	} else if fileType != "" {
 		files, err = embedpkg.ListTypeFiles(category, fileType)
 		if err != nil {
 			return false, fmt.Errorf("failed to list files: %w", err)
@@ -339,6 +353,9 @@ func PreviewInstall(category string, fileType string) (bool, error) {
 	}
 
 	if len(files) == 0 {
+		if category == "" {
+			return false, fmt.Errorf("no installable files found")
+		}
 		if fileType != "" {
 			return false, fmt.Errorf("no %s found in category '%s'", fileType, category)
 		}
@@ -403,7 +420,11 @@ func PreviewInstall(category string, fileType string) (bool, error) {
 	// Clear screen and display banner and preview
 	fmt.Print("\033[H\033[2J") // Clear screen
 	fmt.Println(bannerStyle.Render(banner))
-	fmt.Printf("Preview: %s [%s]\n", category, GetInstallModeDescription())
+	if category == "" {
+		fmt.Printf("Preview: all categories [%s]\n", GetInstallModeDescription())
+	} else {
+		fmt.Printf("Preview: %s [%s]\n", category, GetInstallModeDescription())
+	}
 	fmt.Println()
 
 	installCount := 0
@@ -460,6 +481,8 @@ func PreviewRemove(category string, fileType string) (bool, error) {
 	fmt.Println(bannerStyle.Render(banner))
 	if fileType != "" {
 		fmt.Printf("Preview: Remove %s from %s [%s]\n", fileType, category, GetInstallModeDescription())
+	} else if category == "" {
+		fmt.Printf("Preview: Remove all categories [%s]\n", GetInstallModeDescription())
 	} else {
 		fmt.Printf("Preview: Remove category %s [%s]\n", category, GetInstallModeDescription())
 	}

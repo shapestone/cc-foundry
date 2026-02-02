@@ -154,12 +154,12 @@ Displays your Claude Code directory structure and installed files:
 ```
 📁 Claude Code Directory Structure
 
-User-level (~/.claude/):
+User (~/.claude/):
   commands/  (5 files)
   agents/    (3 files)
   skills/    (2 skills)
 
-Project-level (.claude/):
+Project (.claude/):
   ✗ Directory does not exist
 
 📦 Installed Files (managed by foundry)
@@ -213,13 +213,13 @@ Install commands, agents, and skills to your system:
 2. **Choose location**:
    ```
    Choose location
-   ❯ 1. Project (.claude/)
-     2. Personal (~/.claude/)
+   ❯ User (~/.claude/)
+     Project (.claude/)
    ```
 
 3. **Preview changes**:
    ```
-   Preview: development [user-level (~/.claude/)]
+   Preview: development [user (~/.claude/)]
 
      + command: ccf-development-implement.md → ~/.claude/commands/ccf-development-implement.md
      ↻ agent: ccf-development-oss-auditor.md → ~/.claude/agents/ccf-development-oss-auditor.md (will update)
@@ -255,13 +255,13 @@ Remove installed files:
 2. **Choose location**:
    ```
    Choose location
-   ❯ 1. Project (.claude/)
-     2. Personal (~/.claude/)
+   ❯ User (~/.claude/)
+     Project (.claude/)
    ```
 
 3. **Preview removal**:
    ```
-   Preview: Remove category development [user-level (~/.claude/)]
+   Preview: Remove category development [user (~/.claude/)]
 
      - command: ~/.claude/commands/ccf-development-implement.md
      - agent: ~/.claude/agents/ccf-development-oss-auditor.md
@@ -337,12 +337,12 @@ Displays usage information and file structure details.
 
 ### Installation Locations
 
-**Personal (User-level)** - `~/.claude/`:
+**User** - `~/.claude/`:
 - **Scope**: Available across all projects
 - **Use when**: You want these files available everywhere you use Claude Code
 - **Example**: General-purpose agents/skills you use daily
 
-**Project (Project-level)** - `.claude/`:
+**Project** - `.claude/`:
 - **Scope**: Only available in this specific project
 - **Version control**: Can be committed to git and shared with team
 - **Use when**: Project-specific configurations or team-shared commands
@@ -677,14 +677,14 @@ All category files are embedded directly in the binary using Go's `embed.FS`:
 
 If Claude Code directories don't exist, the tool will create them automatically:
 
-**User-level**:
+**User**:
 ```
 ~/.claude/commands/
 ~/.claude/agents/
 ~/.claude/skills/
 ```
 
-**Project-level**:
+**Project**:
 ```
 .claude/commands/
 .claude/agents/

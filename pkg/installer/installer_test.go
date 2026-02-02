@@ -16,12 +16,12 @@ func TestGetInstallModeDescription(t *testing.T) {
 		{
 			name:     "user mode",
 			mode:     InstallModeUser,
-			expected: "user-level (~/.claude/)",
+			expected: "user (~/.claude/)",
 		},
 		{
 			name:     "project mode",
 			mode:     InstallModeProject,
-			expected: "project-level (.claude/)",
+			expected: "project (.claude/)",
 		},
 	}
 

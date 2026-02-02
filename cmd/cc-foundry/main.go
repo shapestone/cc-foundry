@@ -120,39 +120,14 @@ func handleInstallInteractive() {
 		return
 	}
 
-	// Handle install all
+	// For "all", pass empty string to show/install all files at once
+	installCategory := category
 	if category == "all" {
-		categories, err := embedpkg.ListCategories()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error listing categories: %v\n", err)
-			return
-		}
-
-		for _, cat := range categories {
-			proceed, err := installer.PreviewInstall(cat, "")
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				installer.WaitForKey()
-				return
-			}
-
-			if !proceed {
-				fmt.Println("Installation cancelled.")
-				return
-			}
-
-			if err := installer.InstallCategory(cat); err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				installer.WaitForKey()
-				return
-			}
-		}
-		installer.WaitForKey()
-		return
+		installCategory = ""
 	}
 
-	// Preview and install specific category
-	proceed, err := installer.PreviewInstall(category, "")
+	// Preview installation
+	proceed, err := installer.PreviewInstall(installCategory, "")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		installer.WaitForKey()
@@ -164,7 +139,7 @@ func handleInstallInteractive() {
 		return
 	}
 
-	if err := installer.InstallCategory(category); err != nil {
+	if err := installer.InstallCategory(installCategory); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		installer.WaitForKey()
 		return
@@ -196,39 +171,14 @@ func handleRemoveInteractive() {
 		return
 	}
 
-	// Handle remove all
+	// For "all", pass empty string to show/remove all files at once
+	removeCategory := category
 	if category == "all" {
-		categories, err := embedpkg.ListCategories()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error listing categories: %v\n", err)
-			return
-		}
-
-		for _, cat := range categories {
-			proceed, err := installer.PreviewRemove(cat, "")
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				installer.WaitForKey()
-				return
-			}
-
-			if !proceed {
-				fmt.Println("Removal cancelled.")
-				return
-			}
-
-			if err := installer.RemoveCategory(cat); err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				installer.WaitForKey()
-				return
-			}
-		}
-		installer.WaitForKey()
-		return
+		removeCategory = ""
 	}
 
-	// Preview and remove specific category
-	proceed, err := installer.PreviewRemove(category, "")
+	// Preview removal
+	proceed, err := installer.PreviewRemove(removeCategory, "")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		installer.WaitForKey()
@@ -240,7 +190,7 @@ func handleRemoveInteractive() {
 		return
 	}
 
-	if err := installer.RemoveCategory(category); err != nil {
+	if err := installer.RemoveCategory(removeCategory); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		installer.WaitForKey()
 		return
@@ -294,13 +244,13 @@ func printUsage() {
 
 Installation Locations:
 
-User-level (~/.claude/):
+User (~/.claude/):
   - Available across all projects
   ~/.claude/commands/           Command files (flat .md files)
   ~/.claude/agents/             Agent files (flat .md files)
   ~/.claude/skills/[name]/      Skill subdirectories with SKILL.md
 
-Project-level (.claude/):
+Project (.claude/):
   - Specific to current project, can be version-controlled
   .claude/commands/             Command files (flat .md files)
   .claude/agents/               Agent files (flat .md files)

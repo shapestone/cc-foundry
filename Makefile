@@ -282,7 +282,7 @@ install: ## Install (default: $GOPATH/bin, use GLOBAL=1 for /usr/local/bin)
 		echo "✓ Installed to $(INSTALL_DIR)/$(PROJECT_NAME)"; \
 	else \
 		echo "Installing $(PROJECT_NAME)..."; \
-		go install ./$(CMD_DIR); \
+		go install -ldflags="$(VERSION_FLAGS)" ./$(CMD_DIR); \
 		GOPATH=$${GOPATH:-$$HOME/go}; \
 		echo "✓ Installed to $$GOPATH/bin/$(PROJECT_NAME)"; \
 		if ! echo "$$PATH" | grep -q "$$GOPATH/bin"; then \

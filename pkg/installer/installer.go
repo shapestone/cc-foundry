@@ -154,12 +154,22 @@ func InstallFile(file embedpkg.CategoryFile, st *state.State) error {
 
 // InstallCategory installs all files in a category
 func InstallCategory(category string) error {
-	files, err := embedpkg.ListCategoryFiles(category)
+	var files []embedpkg.CategoryFile
+	var err error
+
+	if category == "" {
+		files, err = embedpkg.ListAllFiles()
+	} else {
+		files, err = embedpkg.ListCategoryFiles(category)
+	}
 	if err != nil {
-		return fmt.Errorf("failed to list category files: %w", err)
+		return fmt.Errorf("failed to list files: %w", err)
 	}
 
 	if len(files) == 0 {
+		if category == "" {
+			return fmt.Errorf("no installable files found")
+		}
 		return fmt.Errorf("no files found in category '%s'", category)
 	}
 
@@ -171,7 +181,11 @@ func InstallCategory(category string) error {
 	// Clear screen and show banner
 	fmt.Print("\033[H\033[2J") // Clear screen
 	fmt.Println(bannerStyle.Render(banner))
-	fmt.Printf("Installing category: %s [%s]\n", category, GetInstallModeDescription())
+	if category == "" {
+		fmt.Printf("Installing all categories [%s]\n", GetInstallModeDescription())
+	} else {
+		fmt.Printf("Installing category: %s [%s]\n", category, GetInstallModeDescription())
+	}
 
 	for _, file := range files {
 		if err := InstallFile(file, st); err != nil {
@@ -183,7 +197,11 @@ func InstallCategory(category string) error {
 		return fmt.Errorf("failed to save state: %w", err)
 	}
 
-	fmt.Printf("\n✓ Successfully installed %d files from category '%s' [%s]\n", len(files), category, GetInstallModeDescription())
+	if category == "" {
+		fmt.Printf("\n✓ Successfully installed %d files from all categories [%s]\n", len(files), GetInstallModeDescription())
+	} else {
+		fmt.Printf("\n✓ Successfully installed %d files from category '%s' [%s]\n", len(files), category, GetInstallModeDescription())
+	}
 	return nil
 }
 
@@ -225,9 +243,9 @@ func InstallType(category, fileType string) error {
 // GetInstallModeDescription returns a human-readable description of the current install mode
 func GetInstallModeDescription() string {
 	if CurrentInstallMode == InstallModeProject {
-		return "project-level (.claude/)"
+		return "project (.claude/)"
 	}
-	return "user-level (~/.claude/)"
+	return "user (~/.claude/)"
 }
 
 // ShowBanner displays the application banner with screen clear
@@ -386,7 +404,11 @@ func RemoveCategory(category string) error {
 	// Clear screen and show banner
 	fmt.Print("\033[H\033[2J") // Clear screen
 	fmt.Println(bannerStyle.Render(banner))
-	fmt.Printf("Removing %d files from category: %s [%s]\n", len(installations), category, GetInstallModeDescription())
+	if category == "" {
+		fmt.Printf("Removing %d files from all categories [%s]\n", len(installations), GetInstallModeDescription())
+	} else {
+		fmt.Printf("Removing %d files from category: %s [%s]\n", len(installations), category, GetInstallModeDescription())
+	}
 
 	for _, inst := range installations {
 		if err := RemoveInstallation(inst); err != nil {
@@ -399,7 +421,11 @@ func RemoveCategory(category string) error {
 		return fmt.Errorf("failed to save state: %w", err)
 	}
 
-	fmt.Printf("\n✓ Successfully removed %d files from category '%s' [%s]\n", len(installations), category, GetInstallModeDescription())
+	if category == "" {
+		fmt.Printf("\n✓ Successfully removed %d files from all categories [%s]\n", len(installations), GetInstallModeDescription())
+	} else {
+		fmt.Printf("\n✓ Successfully removed %d files from category '%s' [%s]\n", len(installations), category, GetInstallModeDescription())
+	}
 	return nil
 }
 

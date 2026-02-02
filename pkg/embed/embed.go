@@ -70,6 +70,24 @@ func ListCategoryFiles(category string) ([]CategoryFile, error) {
 	return files, nil
 }
 
+// ListAllFiles returns all files across all categories
+func ListAllFiles() ([]CategoryFile, error) {
+	categories, err := ListCategories()
+	if err != nil {
+		return nil, err
+	}
+
+	var allFiles []CategoryFile
+	for _, cat := range categories {
+		files, err := ListCategoryFiles(cat)
+		if err != nil {
+			return nil, err
+		}
+		allFiles = append(allFiles, files...)
+	}
+	return allFiles, nil
+}
+
 // ListTypeFiles returns all files of a specific type in a category
 func ListTypeFiles(category, fileType string) ([]CategoryFile, error) {
 	var files []CategoryFile

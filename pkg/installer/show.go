@@ -84,16 +84,16 @@ func (m treeModel) View() string {
 	sb.WriteString(bannerStyle.Render(banner))
 	sb.WriteString("\n")
 
-	// Styled title
-	title := titleStyle.Render("📁 Claude Code Directory Structure")
+	// Styled title (use promptStyle for consistency with menu screens)
+	title := promptStyle.Render("📁 Claude Code Directory Structure")
 	sb.WriteString(title)
 	sb.WriteString("\n\n")
 
 	for i, node := range m.flatList {
-		// Cursor indicator
-		cursor := "  "
+		// Cursor indicator (leading space matches menu item padding)
+		cursor := "   "
 		if i == m.cursor {
-			cursor = cursorStyle.Render("❯ ")
+			cursor = cursorStyle.Render("❯ ") + " "
 		}
 
 		// Indentation
@@ -131,10 +131,7 @@ func (m treeModel) View() string {
 			label = fmt.Sprintf("%s (empty)", node.label)
 		}
 
-		// Add blank line BEFORE root-level sections (except the first one)
-		if node.depth == 0 && i > 0 {
-			sb.WriteString("\n")
-		}
+		// No blank lines between root-level items (consistent with menu spacing)
 
 		sb.WriteString(fmt.Sprintf("%s%s%s%s\n", cursor, indent, indicator, label))
 	}
@@ -188,19 +185,19 @@ func ShowDirectoryStructure() error {
 func buildTree() ([]*treeNode, error) {
 	var nodes []*treeNode
 
-	// User-level directory
-	userNode, err := buildLocationNode("🏠 User-level (~/.claude/)", true, 0)
+	// User directory
+	userNode, err := buildLocationNode("🏠 User (~/.claude/)", true, 0)
 	if err != nil {
 		return nil, err
 	}
 	nodes = append(nodes, userNode)
 
-	// Project-level directory
+	// Project directory
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get working directory: %w", err)
 	}
-	projectLabel := fmt.Sprintf("📂 Project-level (%s/.claude/)", cwd)
+	projectLabel := fmt.Sprintf("📂 Project (%s/.claude/)", cwd)
 	projectNode, err := buildLocationNode(projectLabel, false, 0)
 	if err != nil {
 		return nil, err
@@ -385,7 +382,7 @@ func buildInstalledFilesNode() (*treeNode, error) {
 	projectCount := len(projectLevelInsts)
 
 	// Create root node for installed files
-	rootLabel := fmt.Sprintf("📦 Installed Files: %d user-level, %d project-level", userCount, projectCount)
+	rootLabel := fmt.Sprintf("📦 Installed Files: %d in user, %d in project", userCount, projectCount)
 	rootNode := &treeNode{
 		label:    rootLabel,
 		isDir:    true,

@@ -23,7 +23,7 @@ const (
 // ShowMainMenu displays the main interactive menu and returns the selected option
 // lastSelected is the index to pre-select (for cursor memory)
 func ShowMainMenu(lastSelected int) (MainMenuOption, int, error) {
-	fmt.Println("\n🔧 cc-foundry - Manage Claude Code files\n")
+	fmt.Print("\n🔧 cc-foundry - Manage Claude Code files\n\n")
 
 	options := []string{
 		"Show directory structure",
