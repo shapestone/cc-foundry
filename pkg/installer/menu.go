@@ -3,7 +3,7 @@ package installer
 import (
 	"fmt"
 
-	embedpkg "github.com/shapestone/claude-code-foundry/pkg/embed"
+	embedpkg "github.com/shapestone/cc-foundry/pkg/embed"
 )
 
 // MainMenuOption represents a main menu choice
@@ -22,7 +22,7 @@ const (
 
 // ShowMainMenu displays the main interactive menu and returns the selected option
 func ShowMainMenu() (MainMenuOption, error) {
-	fmt.Println("\n🔧 claude-code-foundry - Manage Claude Code files\n")
+	fmt.Println("\n🔧 cc-foundry - Manage Claude Code files\n")
 
 	options := []string{
 		"Show directory structure",

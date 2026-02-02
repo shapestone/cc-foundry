@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/shapestone/claude-code-foundry/pkg/state"
+	"github.com/shapestone/cc-foundry/pkg/state"
 )
 
 // Issue represents a detected problem

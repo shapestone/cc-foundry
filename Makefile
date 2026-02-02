@@ -1,5 +1,5 @@
 # Project variables
-PROJECT_NAME := claude-code-foundry
+PROJECT_NAME := cc-foundry
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "1.0.0-dev")
 BUILD_TIME := $(shell date -u '+%Y-%m-%d_%H:%M:%S')
 COMMIT := $(shell git rev-parse HEAD 2>/dev/null || echo "unknown")
@@ -73,9 +73,16 @@ help: ## Show this help message
 	@echo "Available targets:"
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
+# Manifest generation
+.PHONY: generate-manifest
+generate-manifest: ## Generate manifest.json and bundle.tar.gz from files/
+	@echo "Generating manifest and bundle..."
+	@$(GOCMD) run scripts/generate-manifest.go
+	@echo ""
+
 # Build targets
 .PHONY: build
-build: ## Build the application (development, no signing for speed)
+build: generate-manifest ## Build the application (development, no signing for speed)
 	@echo "Building $(PROJECT_NAME) for $(DETECTED_OS)..."
 	@$(MKDIR) $(BIN_DIR)
 	$(GOBUILD) $(BUILD_FLAGS) -o $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT) ./$(CMD_DIR)
@@ -83,7 +90,7 @@ build: ## Build the application (development, no signing for speed)
 	@echo "Note: For signed/notarized build, use 'make build-signed' or 'make release'"
 
 .PHONY: build-signed
-build-signed: ## Build and sign with Developer ID (no notarization)
+build-signed: generate-manifest ## Build and sign with Developer ID (no notarization)
 	@echo "Building $(PROJECT_NAME) for $(DETECTED_OS)..."
 	@$(MKDIR) $(BIN_DIR)
 	$(GOBUILD) $(BUILD_FLAGS) -o $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT) ./$(CMD_DIR)
@@ -107,7 +114,7 @@ else
 endif
 
 .PHONY: build-prod
-build-prod: ## Build optimized production binary
+build-prod: generate-manifest ## Build optimized production binary
 	@echo "Building $(PROJECT_NAME) (production) for $(DETECTED_OS)..."
 	@$(MKDIR) $(BIN_DIR)
 	$(GOBUILD) $(PROD_BUILD_FLAGS) -o $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT) ./$(CMD_DIR)
@@ -121,7 +128,7 @@ endif
 
 # Cross-platform builds
 .PHONY: build-all
-build-all: build-linux build-darwin-amd64 build-darwin-arm64 build-windows ## Build for all platforms
+build-all: generate-manifest build-linux build-darwin-amd64 build-darwin-arm64 build-windows ## Build for all platforms
 
 .PHONY: build-linux
 build-linux: ## Build for Linux x64

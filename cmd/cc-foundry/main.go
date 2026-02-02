@@ -5,13 +5,13 @@ import (
 	"os"
 	"strings"
 
-	"github.com/shapestone/claude-code-foundry/embeddata"
-	"github.com/shapestone/claude-code-foundry/pkg/doctor"
-	embedpkg "github.com/shapestone/claude-code-foundry/pkg/embed"
-	"github.com/shapestone/claude-code-foundry/pkg/installer"
+	"github.com/shapestone/cc-foundry/embeddata"
+	"github.com/shapestone/cc-foundry/pkg/doctor"
+	embedpkg "github.com/shapestone/cc-foundry/pkg/embed"
+	"github.com/shapestone/cc-foundry/pkg/installer"
 )
 
-const version = "1.0.0"
+const version = "2.0.0"
 
 // Build information - set via ldflags during build
 var (
@@ -280,7 +280,7 @@ func showVersion() {
 func printUsage() {
 	installer.ShowBanner()
 	fmt.Println(`Interactive Mode:
-  Just run: claude-code-foundry
+  Just run: cc-foundry
 
   The tool will guide you through an interactive menu to:
   - Show directory structure and installed files

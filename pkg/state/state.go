@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	StateFile = ".claude-code-foundry.json"
-	Version   = "1.0.0"
+	StateFile = ".cc-foundry.json"
+	Version   = "2.0.0"
 )
 
 // State represents the foundry installation state

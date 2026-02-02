@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-We actively support the following versions of claude-code-foundry with security updates:
+We actively support the following versions of cc-foundry with security updates:
 
 | Version | Supported          |
 | ------- | ------------------ |
@@ -11,13 +11,13 @@ We actively support the following versions of claude-code-foundry with security 
 
 ## Security Context
 
-claude-code-foundry modifies critical system files and directories:
+cc-foundry modifies critical system files and directories:
 
 - `~/.claude.json` - Claude Code's main configuration file
 - `~/.claude/` - User-level Claude Code file directories
 - `.claude/` - Project-level Claude Code file directories
-- `~/.claude-code-foundry.json` - State tracking file
-- `~/.claude-code-foundry-backups/` - Backup directory
+- `~/.cc-foundry.json` - State tracking file
+- `~/.cc-foundry-backups/` - Backup directory
 
 **Potential Security Concerns:**
 - File system operations (install/remove/backup)
@@ -48,7 +48,7 @@ claude-code-foundry modifies critical system files and directories:
 
 ### Known Limitations
 
-- State file (`~/.claude-code-foundry.json`) is user-readable/writable
+- State file (`~/.cc-foundry.json`) is user-readable/writable
 - Backup files stored in user's home directory
 - No encryption of backup files
 - Doctor command modifies `~/.claude.json` directly (experimental)
@@ -111,20 +111,20 @@ After a fix is released, we will:
 
 ## Security Best Practices for Users
 
-### When Using claude-code-foundry
+### When Using cc-foundry
 
 1. **Verify Source**:
    ```bash
    # Build from source or verify binary signature
-   git clone https://github.com/shapestone/claude-code-foundry.git
-   cd claude-code-foundry
+   git clone https://github.com/shapestone/cc-foundry.git
+   cd cc-foundry
    make build
    ```
 
 2. **Review Before Installing**:
    ```bash
    # List what will be installed
-   claude-code-foundry list all
+   cc-foundry list all
 
    # Review specific category files before installation
    # (Files are embedded in the binary)
@@ -133,11 +133,11 @@ After a fix is released, we will:
 3. **Use Dry Run (when available)**:
    ```bash
    # For doctor command
-   claude-code-foundry doctor --dry-run
+   cc-foundry doctor --dry-run
    ```
 
 4. **Regular Backups**:
-   - claude-code-foundry creates automatic backups
+   - cc-foundry creates automatic backups
    - Consider additional backups of `~/.claude.json`:
      ```bash
      cp ~/.claude.json ~/.claude.json.backup-$(date +%Y%m%d)
@@ -146,7 +146,7 @@ After a fix is released, we will:
 5. **Review State File**:
    ```bash
    # Check what's installed
-   cat ~/.claude-code-foundry.json | jq .
+   cat ~/.cc-foundry.json | jq .
    ```
 
 ### What to Avoid
@@ -197,7 +197,7 @@ Subscribe to security updates:
 ## Questions?
 
 For general security questions (not vulnerability reports):
-- Open a [GitHub Discussion](https://github.com/shapestone/claude-code-foundry/discussions)
+- Open a [GitHub Discussion](https://github.com/shapestone/cc-foundry/discussions)
 - Tag with "security" label
 
 For vulnerability reports:
@@ -207,8 +207,8 @@ For vulnerability reports:
 
 ## Acknowledgments
 
-We appreciate security researchers who help keep claude-code-foundry safe:
+We appreciate security researchers who help keep cc-foundry safe:
 
 - *Your name could be here!*
 
-Thank you for helping keep claude-code-foundry secure!
+Thank you for helping keep cc-foundry secure!

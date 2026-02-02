@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	embedpkg "github.com/shapestone/claude-code-foundry/pkg/embed"
-	"github.com/shapestone/claude-code-foundry/pkg/state"
+	embedpkg "github.com/shapestone/cc-foundry/pkg/embed"
+	"github.com/shapestone/cc-foundry/pkg/state"
 )
 
 // InstallMode determines where files are installed

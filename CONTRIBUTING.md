@@ -1,6 +1,6 @@
-# Contributing to claude-code-foundry
+# Contributing to cc-foundry
 
-Thank you for your interest in contributing to claude-code-foundry! This document provides guidelines and instructions for contributing to the project.
+Thank you for your interest in contributing to cc-foundry! This document provides guidelines and instructions for contributing to the project.
 
 ## Code of Conduct
 
@@ -19,7 +19,7 @@ Before creating a bug report, please check existing issues to avoid duplicates. 
   - OS (macOS, Linux, Windows/WSL)
   - Go version (`go version`)
   - Claude Code version
-  - claude-code-foundry version
+  - cc-foundry version
 - **Relevant logs or error messages**
 
 **Security Issues**: If you discover a security vulnerability, please see [SECURITY.md](SECURITY.md) for responsible disclosure instructions.
@@ -55,8 +55,8 @@ We love pull requests! Here's how to contribute code:
 2. **Fork and clone**:
    ```bash
    # Fork the repository on GitHub, then:
-   git clone https://github.com/YOUR-USERNAME/claude-code-foundry.git
-   cd claude-code-foundry
+   git clone https://github.com/YOUR-USERNAME/cc-foundry.git
+   cd cc-foundry
    ```
 
 3. **Install dependencies**:
@@ -71,7 +71,7 @@ We love pull requests! Here's how to contribute code:
 
 5. **Verify installation**:
    ```bash
-   ./build/bin/claude-code-foundry --version
+   ./build/bin/cc-foundry --version
    ```
 
 #### Development Workflow
@@ -137,7 +137,7 @@ We love pull requests! Here's how to contribute code:
 
 **Project Structure**:
 ```
-claude-code-foundry/
+cc-foundry/
 ├── cmd/                  # CLI application entry points
 ├── pkg/                  # Public library packages
 ├── internal/             # Private application code
@@ -251,10 +251,10 @@ embeddata/categories/testing/skills/playwright-guide.md
 make build
 
 # List to verify your file appears
-./build/bin/claude-code-foundry list all
+./build/bin/cc-foundry list all
 
 # Test installation
-./build/bin/claude-code-foundry install [category]
+./build/bin/cc-foundry install [category]
 ```
 
 #### 5. Documentation
@@ -312,13 +312,13 @@ make install        # Install binary to $GOPATH/bin (use GLOBAL=1 for /usr/local
 
 ```bash
 # Build with debug info
-go build -gcflags="all=-N -l" -o build/bin/claude-code-foundry cmd/claude-code-foundry/main.go
+go build -gcflags="all=-N -l" -o build/bin/cc-foundry cmd/cc-foundry/main.go
 
 # Run with verbose output
-./build/bin/claude-code-foundry --debug [command]
+./build/bin/cc-foundry --debug [command]
 
 # Check state file
-cat ~/.claude-code-foundry.json | jq .
+cat ~/.cc-foundry.json | jq .
 ```
 
 ### Testing File Operations
@@ -339,8 +339,8 @@ Currently, this project is maintained by Shapestone. Major decisions are made by
 
 ## Questions?
 
-- **General questions**: Open a [GitHub Discussion](https://github.com/shapestone/claude-code-foundry/discussions)
-- **Bug reports**: Open a [GitHub Issue](https://github.com/shapestone/claude-code-foundry/issues)
+- **General questions**: Open a [GitHub Discussion](https://github.com/shapestone/cc-foundry/discussions)
+- **Bug reports**: Open a [GitHub Issue](https://github.com/shapestone/cc-foundry/issues)
 - **Security issues**: See [SECURITY.md](SECURITY.md)
 
 ## Recognition
@@ -350,10 +350,10 @@ Contributors will be recognized in:
 - Release notes (for significant contributions)
 - GitHub contributors page
 
-Thank you for contributing to claude-code-foundry!
+Thank you for contributing to cc-foundry!
 
 ---
 
 ## License
 
-By contributing to claude-code-foundry, you agree that your contributions will be licensed under the Apache License 2.0. See [LICENSE](LICENSE) for details.
+By contributing to cc-foundry, you agree that your contributions will be licensed under the Apache License 2.0. See [LICENSE](LICENSE) for details.

@@ -24,7 +24,7 @@ Describe how you think this feature should work.
 **Example usage:**
 ```bash
 # Show how the feature would be used
-claude-code-foundry [new-command] [options]
+cc-foundry [new-command] [options]
 ```
 
 **Expected output:**
@@ -93,4 +93,4 @@ Would you be willing to implement this feature yourself?
 
 ---
 
-**Note:** Features marked as "planned" in the [Roadmap](https://github.com/shapestone/claude-code-foundry#roadmap) may already be under consideration. Please check first to avoid duplicates.
+**Note:** Features marked as "planned" in the [Roadmap](https://github.com/shapestone/cc-foundry#roadmap) may already be under consideration. Please check first to avoid duplicates.

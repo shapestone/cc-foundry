@@ -1,10 +1,10 @@
-# claude-code-foundry
+# cc-foundry
 
 A community tool for managing and standardizing Claude Code files (commands, agents, and skills) across development teams.
 
 ## ⚠️ Trademark Notice
 
-**claude-code-foundry** is an independent, community-created tool and is **NOT** officially affiliated with, endorsed by, or sponsored by Anthropic PBC.
+**cc-foundry** is an independent, community-created tool and is **NOT** officially affiliated with, endorsed by, or sponsored by Anthropic PBC.
 
 - "Claude" and "Claude Code" are trademarks of Anthropic PBC
 - This tool is designed to work with Claude Code but is developed and maintained independently
@@ -16,7 +16,7 @@ For official Claude Code documentation and support, visit [Anthropic's official 
 
 ## Overview
 
-claude-code-foundry helps teams maintain consistent Claude Code configurations by providing a centralized repository and CLI tool for managing:
+cc-foundry helps teams maintain consistent Claude Code configurations by providing a centralized repository and CLI tool for managing:
 
 - **Commands** - Custom slash commands for repeated workflows
 - **Agents** - Specialized AI agents for specific tasks
@@ -54,15 +54,15 @@ claude-code-foundry helps teams maintain consistent Claude Code configurations b
 ## Installation
 
 ### Prerequisites
-- Go 1.21 or higher
+- Go 1.25 or higher
 - Claude Code installed on your system
 
 ### Build from Source
 
 ```bash
 # Clone the repository
-git clone https://github.com/shapestone/claude-code-foundry.git
-cd claude-code-foundry
+git clone https://github.com/shapestone/cc-foundry.git
+cd cc-foundry
 ```
 
 #### Development Build (Fast)
@@ -81,15 +81,15 @@ make install GLOBAL=1
 ```
 
 **Installation locations:**
-- **Default**: `$GOPATH/bin/claude-code-foundry` (typically `~/go/bin`) - No sudo required
-- **Global**: `/usr/local/bin/claude-code-foundry` - Requires sudo, available to all users
+- **Default**: `$GOPATH/bin/cc-foundry` (typically `~/go/bin`) - No sudo required
+- **Global**: `/usr/local/bin/cc-foundry` - Requires sudo, available to all users
 
 The installer will check if `$GOPATH/bin` is in your PATH and provide instructions if needed.
 
 ### Verify Installation
 
 ```bash
-claude-code-foundry version
+cc-foundry version
 ```
 
 ### macOS Release Build (Optional)
@@ -122,13 +122,13 @@ make release
 Simply run the command without arguments to launch the interactive menu:
 
 ```bash
-claude-code-foundry
+cc-foundry
 ```
 
 You'll see a main menu with arrow-key navigation:
 
 ```
-🔧 claude-code-foundry - Manage Claude Code files
+🔧 cc-foundry - Manage Claude Code files
 
 What would you like to do?
 ❯ Show directory structure
@@ -326,7 +326,7 @@ The doctor command checks:
 Shows the current version:
 
 ```
-claude-code-foundry v1.0.0
+cc-foundry v2.0.0
 ```
 
 #### 7. Help
@@ -383,7 +383,7 @@ Command-line arguments for scripting will be added in a future release, allowing
 
 ```bash
 # Not yet available - coming in future version
-claude-code-foundry install --category development --location user --yes
+cc-foundry install --category development --location user --yes
 ```
 
 For now, the interactive menu provides the full feature set.
@@ -394,18 +394,18 @@ For now, the interactive menu provides the full feature set.
 
 ```bash
 # Launch interactive guide
-claude-code-foundry help
+cc-foundry help
 
 # Quick reference
-claude-code-foundry --help
-claude-code-foundry install --help
+cc-foundry --help
+cc-foundry install --help
 ```
 
 ---
 
 ## Available Agents & Skills
 
-### Development Category
+### OSS Development Category
 
 #### 🤖 oss-auditor Agent
 **Purpose**: Comprehensive open source project repository auditing
@@ -428,45 +428,10 @@ Analyzes repositories to assess documentation completeness, identify gaps, evalu
 
 **Installation**:
 ```bash
-claude-code-foundry install development agents
+cc-foundry install oss-development agents
 ```
 
 After installation, invoke the agent in conversation to analyze any repository.
-
----
-
-#### 📚 makefile-skills-guide Skill
-**Purpose**: Comprehensive reference for Makefile build automation
-
-Production-proven patterns and best practices for creating Makefiles for multi-language projects, cross-platform builds, and development workflows.
-
-**Key Features**:
-- Full-stack integration (Go + npm/Node.js)
-- Cross-platform compilation (Linux, macOS, Windows)
-- Process management (start/stop/restart with PID tracking)
-- Testing integration (unit, E2E with Playwright)
-- Development workflows (hot reload, watch mode)
-- Self-documenting help system
-
-**Coverage**:
-- Basic and advanced Makefile concepts
-- Common production patterns
-- Full-stack build orchestration
-- Dependency management
-- Linting, formatting, and validation
-- Cross-platform compatibility
-- Debugging techniques
-
-**Use Cases**:
-- "Create a Makefile for my Go + React project"
-- "How do I manage background processes with Make?"
-- "Set up cross-platform builds"
-- "Integrate Playwright E2E tests into Make"
-
-**Installation**:
-```bash
-claude-code-foundry install development skills
-```
 
 ---
 
@@ -490,10 +455,44 @@ Provides comprehensive guidance on structuring open source projects based on cha
 
 **Installation**:
 ```bash
-claude-code-foundry install development skills
+cc-foundry install oss-development skills
 ```
 
 The skill is automatically available as context for conversations and is used by the oss-auditor agent.
+
+---
+
+### Development Category
+
+#### 📚 makefile-skills-guide Skill
+**Purpose**: Comprehensive reference for Makefile build automation
+
+Production-proven patterns and best practices for creating Makefiles for multi-language projects, cross-platform builds, and development workflows.
+
+**Installation**:
+```bash
+cc-foundry install development skills
+```
+
+#### 📚 frontend-architecture-vue-typescript Skill
+**Purpose**: Feature-based frontend architecture patterns using Vue 3, TypeScript, Pinia, and Vue Router.
+
+Covers component hierarchy, Pinia store patterns, API service layers, composables, routing, cross-feature communication, and LLM-friendly coding conventions.
+
+**Installation**:
+```bash
+cc-foundry install development skills
+```
+
+#### 📚 hexagonal-architecture Skill
+**Purpose**: Hexagonal architecture (Ports & Adapters) patterns for Go backend applications.
+
+Covers feature-based organization, domain/application/infrastructure/interfaces layers, dependency injection, ports and adapters, and testing strategy.
+
+**Installation**:
+```bash
+cc-foundry install development skills
+```
 
 ---
 
@@ -515,8 +514,8 @@ The **oss-auditor agent** and **oss-project-setup skill** work together:
 
 **Recommended workflow**:
 ```bash
-# Install both
-claude-code-foundry install development
+# Install OSS development tools
+cc-foundry install oss-development
 
 # In conversation, ask the oss-auditor agent to audit your project
 # The agent will use the skill's framework to provide recommendations
@@ -527,16 +526,23 @@ claude-code-foundry install development
 ## Repository Structure
 
 ```
-claude-code-foundry/
-├── categories/              # Managed files organized by purpose
-│   └── development/
+cc-foundry/
+├── embeddata/categories/    # Managed files organized by purpose
+│   ├── development/
+│   │   └── skills/
+│   │       ├── frontend-architecture-vue-typescript-skill.md
+│   │       ├── hexagonal-architecture-go-skill.md
+│   │       └── makefile-skills-guide.md
+│   └── oss-development/
 │       ├── agents/
 │       │   └── oss-auditor.md
 │       └── skills/
-│           ├── makefile-skills-guide.md
+│           ├── github-badges-skill.md
+│           ├── github-cicd-skill.md
 │           └── oss-project-setup.md
-├── cmd/                     # CLI application code
+├── cmd/cc-foundry/          # CLI application entry point
 ├── pkg/                     # Core library packages
+├── scripts/                 # Build tooling
 ├── Makefile                 # Build and install
 ├── go.mod
 ├── go.sum
@@ -621,11 +627,11 @@ Files will automatically be embedded in the next binary build.
 
 ### State Management
 
-The CLI tracks installations in `~/.claude-code-foundry.json`:
+The CLI tracks installations in `~/.cc-foundry.json`:
 
 ```json
 {
-  "version": "1.0.0",
+  "version": "2.0.0",
   "installations": [
     {
       "category": "development",
@@ -650,7 +656,7 @@ The CLI tracks installations in `~/.claude-code-foundry.json`:
 ### Backup & Rollback
 
 Every operation creates a timestamped backup:
-- Location: `~/.claude-code-foundry-backups/[timestamp]/`
+- Location: `~/.cc-foundry-backups/[timestamp]/`
 - Contains: Complete snapshot of affected Claude Code directories
 - Lifecycle: Automatically deleted after successful operation or rollback
 - Rollback: Automatic on any failure during transactional operations
@@ -695,7 +701,7 @@ The `ccf-[category]-[filename]` naming convention prevents conflicts with:
 ### Performance Issues
 
 If Claude Code feels slow:
-1. Run `claude-code-foundry doctor` to analyze your setup
+1. Run `cc-foundry doctor` to analyze your setup
 2. The most common issue is a bloated `~/.claude.json` file (50MB+)
 3. Follow the doctor's recommendations to clean up stale data
 
@@ -743,7 +749,10 @@ make install GLOBAL=1
 
 ## Roadmap
 
-### v1.0.0 (Current)
+### v2.0.0 (Current)
+- ✅ Project renamed to cc-foundry
+- ✅ Split categories: development + oss-development
+- ✅ New skills: frontend-architecture-vue-typescript, hexagonal-architecture, github-badges, github-cicd
 - ✅ Core install/remove functionality (install handles updates automatically)
 - ✅ Category-based organization
 - ✅ Transactional operations with rollback
@@ -828,9 +837,9 @@ This is an independent, community tool. For official support:
 ## Support
 
 ### Getting Help
-- 📖 Documentation: This README and `claude-code-foundry help`
-- 🐛 Bug Reports: [GitHub Issues](https://github.com/shapestone/claude-code-foundry/issues)
-- 💬 Discussions: [GitHub Discussions](https://github.com/shapestone/claude-code-foundry/discussions)
+- 📖 Documentation: This README and `cc-foundry help`
+- 🐛 Bug Reports: [GitHub Issues](https://github.com/shapestone/cc-foundry/issues)
+- 💬 Discussions: [GitHub Discussions](https://github.com/shapestone/cc-foundry/discussions)
 
 ### Useful Resources
 - [Claude Code Official Docs](https://docs.claude.com/)

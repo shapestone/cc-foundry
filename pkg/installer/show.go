@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/shapestone/claude-code-foundry/pkg/state"
+	"github.com/shapestone/cc-foundry/pkg/state"
 )
 
 // treeNode represents a node in the directory tree
