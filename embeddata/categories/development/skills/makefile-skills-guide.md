@@ -283,51 +283,205 @@ var (
 
 ## Advanced Features
 
-### Dynamic Process Management
+### Process & Port Management
+
+#### The Problem: PID/Port Staleness
+
+A naive approach stores PIDs and ports in files. When a process dies unexpectedly, those files become stale. If another service (or external process) grabs the same port, the original service may incorrectly kill it on restart. **This is a real coordination bug in multi-service development environments.**
+
+#### The Solution: PID + Port Ownership Verification
+
+**Never trust a stored PID/port at face value.** Before acting on any recorded state, verify:
+
+1. **Is the PID still alive?** (`kill -0 $PID`)
+2. **Does that PID actually own the recorded port?** (Check with `lsof`)
+
+Only if BOTH conditions are true should you treat the process as "ours." If the PID is dead, or alive but not bound to the expected port, the entry is stale — clean it up, don't kill anything.
+
+#### State File Format
+
+Use a flat text file at `.run/state` with one entry per line:
+
+```
+role:pid:port
+```
+
+Examples:
+```
+http:1234:8080
+grpc:1235:9090
+worker:1236:0
+```
+
+- **role**: A label for the process (e.g., `http`, `grpc`, `worker`, `scheduler`)
+- **pid**: The OS process ID
+- **port**: The port number, or `0` if the process doesn't listen on a port
+
+This format is trivially parseable with `awk`, `grep`, and `cut` — ideal for Makefile shell recipes.
+
+#### Cross-Platform Port Ownership Check
+
+macOS and Linux have different `lsof` behavior. Use this pattern:
+
+```bash
+# Check if a specific PID owns a specific port.
+# Returns 0 (true) if the PID is listening on the port, 1 (false) otherwise.
+pid_owns_port() {
+    local pid="$1" port="$2"
+    if [ "$port" = "0" ]; then
+        # No port to check — just verify PID is alive
+        kill -0 "$pid" 2>/dev/null
+        return $?
+    fi
+    # lsof works on both macOS and Linux
+    # -iTCP:PORT matches the port, -sTCP:LISTEN filters to listeners,
+    # then we grep for the PID
+    lsof -iTCP:"$port" -sTCP:LISTEN -nP 2>/dev/null | awk '{print $2}' | grep -q "^${pid}$"
+}
+```
+
+**Platform notes:**
+- `lsof` is available on macOS (preinstalled), Linux (install `lsof` package), and WSL (Linux behavior)
+- `-nP` avoids DNS/port name resolution for speed
+- On Linux, `ss -tlnp` is an alternative but output format differs; `lsof` is more portable
+- If `lsof` is not available, fall back to: `ss -tlnp 2>/dev/null | grep ":$port " | grep "pid=$pid"` (Linux/WSL only)
+
+#### Finding a Free Port
+
+```bash
+# Find an available port. Checks that nothing is listening on it.
+find_free_port() {
+    local port
+    for port in $(seq 8000 9000); do
+        if ! lsof -iTCP:"$port" -sTCP:LISTEN -nP >/dev/null 2>&1; then
+            echo "$port"
+            return 0
+        fi
+    done
+    echo "ERROR: No free port found in range 8000-9000" >&2
+    return 1
+}
+```
+
+Adjust the port range as needed. Some services may want a specific range (e.g., 3000-3999 for frontend, 8000-8999 for backend).
+
+#### Verification Logic: The Core Pattern
+
+This function validates all entries in the state file and returns what's still actually ours:
+
+```bash
+# Verify all entries in the state file.
+# Prints verified entries to stdout, warnings to stderr.
+# Returns the number of stale entries found.
+verify_state() {
+    local state_file="$1"
+    local stale=0
+    if [ ! -f "$state_file" ]; then
+        return 0
+    fi
+    while IFS=: read -r role pid port; do
+        if kill -0 "$pid" 2>/dev/null; then
+            if pid_owns_port "$pid" "$port"; then
+                echo "$role:$pid:$port"  # Verified — still ours
+            else
+                echo "WARNING: PID $pid alive but NOT on port $port (role: $role) — stale entry" >&2
+                stale=$((stale + 1))
+            fi
+        else
+            echo "WARNING: PID $pid dead (role: $role, port: $port) — stale entry" >&2
+            stale=$((stale + 1))
+        fi
+    done < "$state_file"
+    return $stale
+}
+```
+
+#### Recommended Script: `scripts/process-manager.sh`
+
+Bundle the above functions into a single script with subcommands. The Makefile calls it like:
+
+```bash
+./scripts/process-manager.sh start <role> <command> [--port-range 8000-9000]
+./scripts/process-manager.sh stop [role]          # Stop one or all
+./scripts/process-manager.sh status               # Show verified state
+./scripts/process-manager.sh cleanup              # Remove stale entries
+./scripts/process-manager.sh find-port [range]    # Just find and print a free port
+```
+
+Claude Code should implement this script with these behaviors:
+
+**`start <role> <command>`:**
+1. Run `cleanup` first (verify existing state, remove stale entries, warn)
+2. Check if this role is already running (verified) — if so, error or restart
+3. Find a free port (unless the process doesn't need one)
+4. Launch the process with `nohup`, capture PID
+5. Brief sleep + verify the process actually started and bound the port
+6. Append `role:pid:port` to `.run/state`
+
+**`stop [role]`:**
+1. Read state file, verify each entry with `pid_owns_port`
+2. For verified entries matching the role (or all if no role given): send `SIGTERM`, wait, `SIGKILL` as fallback
+3. Remove stopped entries from state file
+4. Warn about any stale entries (don't try to kill them — they're not ours)
+
+**`status`:**
+1. Read and verify all state entries
+2. Print a table: role, PID, port, status (running/stale/dead)
+
+**`cleanup`:**
+1. Verify all entries, rewrite state file with only verified entries
+2. Print warnings for anything removed
+
+#### Makefile Integration
 
 ```makefile
 RUN_DIR := .run
-PID_FILE := $(RUN_DIR)/server.pid
-LOG_FILE := $(RUN_DIR)/server.log
-PORT_FILE := $(RUN_DIR)/port
+STATE_FILE := $(RUN_DIR)/state
+LOG_DIR := $(RUN_DIR)/logs
+PM := ./scripts/process-manager.sh
 
 .PHONY: start
-start: build ## Start server in background
-	@mkdir -p $(RUN_DIR)
-	@PORT=$$(./scripts/find-port.sh); \
-	echo "Starting server on port $$PORT..."; \
-	nohup $(BIN_DIR)/$(BINARY_NAME) -addr ":$$PORT" > $(LOG_FILE) 2>&1 & echo $$! > $(PID_FILE); \
-	echo $$PORT > $(PORT_FILE); \
-	echo "Server started (PID: $$(cat $(PID_FILE)))"
+start: build ## Start service(s) in background
+	@mkdir -p $(RUN_DIR) $(LOG_DIR)
+	@$(PM) start http "$(BIN_DIR)/$(BINARY_NAME) -addr :PORT" --port-range 8000-9000 --log-dir $(LOG_DIR)
 
 .PHONY: stop
-stop: ## Stop server
-	@if [ -f $(PID_FILE) ]; then \
-		PID=$$(cat $(PID_FILE)); \
-		if kill -0 $$PID 2>/dev/null; then \
-			echo "Stopping server (PID: $$PID)..."; \
-			kill -TERM $$PID 2>/dev/null || true; \
-			sleep 1; \
-			kill -0 $$PID 2>/dev/null && kill -KILL $$PID 2>/dev/null || true; \
-		fi; \
-		rm -f $(PID_FILE) $(PORT_FILE); \
-		echo "Server stopped"; \
-	else \
-		echo "No PID file found"; \
-	fi
+stop: ## Stop all service processes
+	@$(PM) stop
 
 .PHONY: restart
-restart: ## Restart server
-	@make stop 2>/dev/null || true
-	@sleep 1
-	@make start
+restart: stop build start ## Restart service(s)
+
+.PHONY: status
+status: ## Show status of service processes
+	@$(PM) status
+
+.PHONY: force-stop
+force-stop: ## Emergency: kill all verified processes immediately
+	@$(PM) stop --force
 ```
 
-**Key techniques:**
-- `nohup` - Run process detached from terminal
-- `& echo $$!` - Capture background process PID
-- `kill -0` - Check if process exists (no signal sent)
-- `kill -TERM` then `kill -KILL` - Graceful shutdown with fallback
+**Notes for Claude Code:**
+- The `PORT` placeholder in the command string should be replaced by process-manager.sh with the actual allocated port
+- For services with multiple processes, call `start` multiple times with different roles:
+  ```makefile
+  start: build
+  	@$(PM) start http "$(BIN_DIR)/$(BINARY_NAME) serve -addr :PORT" --port-range 8000-8999
+  	@$(PM) start worker "$(BIN_DIR)/$(BINARY_NAME) worker" --no-port
+  ```
+- The `--no-port` flag indicates a process that doesn't listen on any port (stored as port `0`)
+
+#### Key Principles for Claude Code
+
+1. **NEVER kill a process based solely on a stored PID.** Always verify PID + port ownership first.
+2. **Stale entries are informational, not actionable.** If PID is dead or doesn't own the port, just clean up the state file. Don't try to kill whatever is now on that port.
+3. **Always allocate fresh ports on start.** Don't reuse a port from the state file — scan for a free one.
+4. **Warn loudly about stale state.** The user should know when entries didn't match reality.
+5. **Graceful shutdown first.** `SIGTERM` → wait (2-5 seconds) → `SIGKILL` as last resort.
+6. **Verify after launch.** After starting a process, briefly sleep and confirm it's alive and bound to the expected port before recording state.
+7. **Clean up state file on stop.** Remove entries for processes that were successfully stopped.
+8. **Handle the "no state file" case.** First run, missing `.run/` dir — these should all work cleanly.
+9. **Cross-platform**: Use `lsof -iTCP:PORT -sTCP:LISTEN -nP` for port checks — works on macOS, Linux, and WSL. Fall back to `ss` on Linux if `lsof` is unavailable.
 
 ### Development vs Production Builds
 
@@ -511,9 +665,12 @@ clean-frontend:
 
 .PHONY: clean-runtime
 clean-runtime:
-	@if [ -f $(PID_FILE) ] && kill -0 $$(cat $(PID_FILE)) 2>/dev/null; then \
-		echo "Warning: Server still running. Use 'make stop' first."; \
+	@if [ -f $(RUN_DIR)/state ]; then \
+		echo "Verifying running processes before cleanup..."; \
+		if ./scripts/process-manager.sh status 2>/dev/null | grep -q "running"; then \
+			echo "Warning: Services still running. Use 'make stop' first."; \
 		exit 1; \
+		fi; \
 	fi
 	$(RMDIR) $(RUN_DIR)
 
@@ -717,12 +874,12 @@ make watch-production-like  # Auto-restart on changes (requires entr)
 
 ### Server Management
 ```bash
-make start         # Background server with PID tracking
-make stop          # Graceful shutdown
+make start         # Background server with PID+port verification
+make stop          # Graceful shutdown (verified processes only)
 make restart       # Stop + build + start
 make restart-clean # Restart + clear frontend cache
-make force-stop    # Emergency kill all processes
-make status        # Show server status
+make force-stop    # Emergency kill all verified processes
+make status        # Show verified status (role, PID, port, state)
 make logs          # Show last 50 lines
 make logs-follow   # Tail logs (Ctrl+C to stop)
 ```
