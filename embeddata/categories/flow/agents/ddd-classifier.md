@@ -75,6 +75,19 @@ THIS IS THE ONLY ACCEPTABLE FORMAT. Do not use any other format.
 - Sort both tables alphabetically by Name
 - No implementation details: no file paths, table names, SQL types, HTTP endpoints, or code syntax
 
+## Naming Rules
+
+- Use a single canonical name for each concept — do not combine aliases with slashes (e.g., use "Child Tasks" not "SubTask / Child Tasks")
+- Names in the Contains and Uses VOs columns must match exactly across all files
+
+## What Belongs in the Contains Column
+
+The Contains column lists entities or collections that are **loaded and saved as part of this aggregate**:
+- M:N associations fetched with the root (e.g., Stakeholder, Tag on Task)
+- Child collections loaded with the parent (e.g., Child Tasks)
+
+**Do NOT include bare ID-only cross-aggregate references.** If an entity stores another aggregate's ID as a foreign key (e.g., Task stores ProjectId, ParentContainerId), that is an attribute — it belongs in `entities.md`, not in the Contains column.
+
 ## Workflow
 
 1. Scan the codebase for all structs/classes that represent domain concepts.

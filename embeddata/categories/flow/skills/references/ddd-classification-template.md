@@ -40,7 +40,7 @@ The file has a `# DDD Classification` heading, then two tables: Entities and Val
 |--------|---------|-------------|
 | Name | PascalCase entity name. | Never empty. |
 | Aggregate Root | `Yes` or `No`. | Never empty. |
-| Contains | Entities/refs within this aggregate boundary, using `<ul><li>`. Indicate relationship type. | `—` |
+| Contains | Entities/refs that are loaded and saved as part of this aggregate, using `<ul><li>`. Indicate relationship type. Do NOT include bare ID-only cross-aggregate references (e.g., ProjectId on Task). | `—` |
 | Uses VOs | Value objects used as attribute types, using `<ul><li>`. | `—` |
 
 ## Column Rules — Value Objects Table
@@ -50,6 +50,11 @@ The file has a `# DDD Classification` heading, then two tables: Entities and Val
 | Name | PascalCase VO name. | Never empty. |
 | Kind | `Enum`, `Composite`, or `Derived`. | Never empty. |
 | Owned By | Entity that primarily uses this VO. | `—` if shared/computed. |
+
+## Naming Rules
+
+- Use a single canonical name per concept — no slash-separated aliases (e.g., "Child Tasks" not "SubTask / Child Tasks")
+- Names must match exactly across all DDD files
 
 ## Structural Rules
 

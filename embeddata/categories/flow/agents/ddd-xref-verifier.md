@@ -48,8 +48,11 @@ When an entity in `entities.md` uses a type that matches a VO name (e.g., `TaskS
 - That VO is listed in classification's Value Objects table
 - That classification's `Uses VOs` column for that entity includes this VO
 
+**Ignore bare ID-only cross-aggregate references.** When an entity attribute's type is another entity's ID (e.g., `ProjectId`, `ParentContainerId`, `ScheduledTimeBlockId`) and the Description says "Reference by ID only", this is NOT a type reference to check. These are just foreign keys — they don't need to appear in classification's Contains or Uses VOs columns, and they don't belong in aggregate boundary tables.
+
 Flag: entity references a VO type that doesn't exist in value-objects.md
 Flag: entity references a VO type not listed in classification's Uses VOs column
+Do NOT flag: entity has a `ProjectId` or `ParentTaskId` attribute — these are bare ID references, not type mismatches
 
 ### 5. Aggregate Boundary → Classification Contains
 For each aggregate in `aggregates.md`, check that the elements in its boundary table are consistent with classification:
@@ -58,8 +61,11 @@ For each aggregate in `aggregates.md`, check that the elements in its boundary t
 - Elements marked `Value Object` should correspond to VOs in classification
 - The classification's `Contains` column for that root entity should list the same refs
 
+**Bare ID-only cross-aggregate references do NOT belong in the boundary table or the Contains column.** The boundary table shows what is loaded and saved as a unit. If an entity just stores another aggregate's ID as a foreign key (e.g., Task stores ProjectId), that is an attribute in `entities.md` — not a boundary element. Do NOT flag missing boundary rows for bare ID references found in entities.md.
+
 Flag: boundary table element not found in classification
 Flag: classification Contains entry not reflected in boundary table
+Do NOT flag: entity attribute like `ProjectId` missing from boundary table — bare ID refs are excluded by design
 
 ### 6. No Cross-Contamination
 - Entities should not appear as sections in value-objects.md
