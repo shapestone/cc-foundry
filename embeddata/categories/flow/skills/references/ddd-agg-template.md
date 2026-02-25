@@ -51,9 +51,18 @@ A named grouping of tasks with optional nesting.
 
 | Column | Content | Empty Value |
 |--------|---------|-------------|
-| Element | PascalCase name of entity or reference within the aggregate. | Never empty. |
+| Element | PascalCase name of entity, value object, or collection loaded/saved as part of this aggregate. | Never empty. |
 | Type | `Root Entity`, `Entity`, `Entity (ref)`, or `Value Object`. Use `(ref)` for cross-boundary references. | Never empty. |
 | Relationship | How this element relates to the root: `M:N via join`, `One-to-many`, `read-only`, etc. | `—` for the root itself. |
+
+## What Belongs in the Boundary Table
+
+Include elements that are loaded, saved, or computed as part of this aggregate:
+- The root entity itself
+- Entities or collections fetched and persisted with the root
+- Value objects composed inline or computed/derived
+
+Do NOT include bare ID-only cross-aggregate references. If an entity stores another aggregate's ID as a foreign key (e.g., ParentContainerId, ProjectId), that is an attribute in `entities.md`, not a boundary table element.
 
 ## Structural Rules
 
@@ -69,4 +78,5 @@ A named grouping of tasks with optional nesting.
 - File paths, table names, column names, SQL types, HTTP details, code syntax
 - Entity attribute lists (belong in `entities.md`)
 - Value object definitions (belong in `value-objects.md`)
+- Bare ID-only references (belong as attributes in `entities.md`)
 - `## Entities`, `## Value Objects`, `## Notes` sections

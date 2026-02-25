@@ -348,9 +348,19 @@ Each aggregate section must have exactly these parts in this order:
 
 ### Column Rules for Boundary Table
 
-- **Element**: PascalCase name of each entity or reference within the aggregate.
+- **Element**: PascalCase name of each entity, value object, or collection that is loaded/saved as part of this aggregate.
 - **Type**: `Root Entity`, `Entity`, `Entity (ref)`, or `Value Object`. Use `(ref)` for references that cross aggregate boundaries.
 - **Relationship**: How this element relates to the root: `M:N via join`, `One-to-many`, `read-only`, or `—` for the root itself.
+
+### What Belongs in the Boundary Table
+
+Include elements that are **loaded, saved, or computed as part of this aggregate**:
+- The root entity itself
+- Entities or collections fetched and persisted with the root (e.g., Stakeholder M:N associations on Task)
+- Value objects composed inline (e.g., StatSnapshot within StatHistory)
+- Derived/computed value objects (e.g., DerivedStatus on Task)
+
+**Do NOT include bare ID-only cross-aggregate references.** If an entity just stores another aggregate's ID as a foreign key (e.g., ParentContainerId, ProjectId, ScheduledTimeBlockId), that is an attribute on the entity — it belongs in `entities.md`, not in the boundary table. The boundary table shows what is loaded as a unit, not what is pointed to.
 
 ### Structural Rules
 
@@ -363,24 +373,34 @@ Each aggregate section must have exactly these parts in this order:
 
 ---
 
-## Agents
+## Commands
 
-| Agent | Command | Purpose |
-|-------|---------|---------|
-| — | `/ccf-flow-ddd-extract-all` | Chains all extractors sequentially (UL → classify → entities → VOs → aggregates) |
-| `ccf-flow-ddd-classifier` | `/ccf-flow-ddd-classify` | Phase 1: scans code, produces classification.md |
-| `ccf-flow-ddd-ul-extractor` | `/ccf-flow-ddd-ul-extract` | Produces the glossary |
-| `ccf-flow-ddd-ul-verifier` | `/ccf-flow-ddd-ul-verify` | Checks the glossary |
-| `ccf-flow-ddd-entity-extractor` | `/ccf-flow-ddd-entity-extract` | Phase 2: produces entities.md (reads classification.md) |
-| `ccf-flow-ddd-entity-verifier` | `/ccf-flow-ddd-entity-verify` | Checks entities.md |
-| `ccf-flow-ddd-vo-extractor` | `/ccf-flow-ddd-vo-extract` | Phase 2: produces value-objects.md (reads classification.md) |
-| `ccf-flow-ddd-vo-verifier` | `/ccf-flow-ddd-vo-verify` | Checks value-objects.md |
-| `ccf-flow-ddd-agg-extractor` | `/ccf-flow-ddd-agg-extract` | Phase 2: produces aggregates.md (reads classification.md) |
-| `ccf-flow-ddd-agg-verifier` | `/ccf-flow-ddd-agg-verify` | Checks aggregates.md |
+| Command | Purpose |
+|---------|---------|
+| `/ccf-flow-ddd-extract-all` | Full pipeline: UL → classify → entities → VOs → aggregates → xref verify |
+| `/ccf-flow-ddd-extract <concept>` | Re-extract a single concept: `ul`, `classification`, `entities`, `value-objects`, `aggregates` |
+| `/ccf-flow-ddd-xref-verify` | Verify consistency across all DDD files after manual edits |
+
+## Sub-Agents
+
+These are invoked automatically by the commands above. Users do not need to call them directly.
+
+| Agent | Role |
+|-------|------|
+| `ccf-flow-ddd-ul-extractor` | Produces ubiquitous-language.md |
+| `ccf-flow-ddd-ul-verifier` | Checks ubiquitous-language.md format |
+| `ccf-flow-ddd-classifier` | Phase 1: produces classification.md |
+| `ccf-flow-ddd-entity-extractor` | Phase 2: produces entities.md |
+| `ccf-flow-ddd-entity-verifier` | Checks entities.md format |
+| `ccf-flow-ddd-vo-extractor` | Phase 2: produces value-objects.md |
+| `ccf-flow-ddd-vo-verifier` | Checks value-objects.md format |
+| `ccf-flow-ddd-agg-extractor` | Phase 2: produces aggregates.md |
+| `ccf-flow-ddd-agg-verifier` | Checks aggregates.md format |
+| `ccf-flow-ddd-xref-verifier` | Cross-references all files for consistency |
 
 ## Verification
 
-After creating or updating any DDD file, always run the corresponding verifier agent to check the output.
+After creating or updating any DDD file, always run `/ccf-flow-ddd-xref-verify` to check cross-file consistency.
 
 ## Full Template References
 

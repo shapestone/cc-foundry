@@ -41,6 +41,7 @@ For each boundary table verify:
 - First row is the root entity with Type `Root Entity`
 - Types are: `Root Entity`, `Entity`, `Entity (ref)`, or `Value Object`
 - No attribute-level details (no `Name: String` rows — that's entity format)
+- No bare ID-only cross-aggregate references. If an element's Relationship says "by ID only" or the element is just a foreign key to another aggregate (e.g., "Parent Container" with "optional parent by ID only"), it does NOT belong in the boundary table — it's an attribute in `entities.md`. Flag these as: "Bare ID reference — belongs in entities.md, not boundary table"
 
 ### 5. Implementation Leakage — Scan the Entire File
 

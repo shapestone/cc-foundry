@@ -19,6 +19,9 @@ Use the `ccf-flow-ddd-vo-extractor` sub-agent to extract value objects into `doc
 ## Step 5: Aggregates (Phase 2)
 Use the `ccf-flow-ddd-agg-extractor` sub-agent to extract aggregates into `docs/flow/ddd/aggregates.md`. It must read `classification.md` first.
 
+## Step 6: Cross-Reference Verification
+Use the `ccf-flow-ddd-xref-verifier` sub-agent to verify that all four files (classification, entities, value-objects, aggregates) are consistent with each other.
+
 ## After all steps
 
 Print a summary:
@@ -31,6 +34,7 @@ DDD Extraction Complete
 3. Entities:            ✅/❌
 4. Value Objects:       ✅/❌
 5. Aggregates:          ✅/❌
+6. Cross-Reference:     ✅/❌
 ```
 
 If any step fails, continue with the remaining steps. Note failures in the summary.

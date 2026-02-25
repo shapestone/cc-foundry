@@ -74,9 +74,19 @@ Each aggregate section must have exactly these parts in this order:
 
 ## Column Rules
 
-- **Element**: PascalCase name of entity or reference within the aggregate.
+- **Element**: PascalCase name of entity, value object, or collection loaded/saved as part of this aggregate.
 - **Type**: `Root Entity`, `Entity`, `Entity (ref)`, or `Value Object`. Use `(ref)` for cross-boundary references.
 - **Relationship**: How element relates to root: `M:N via join`, `One-to-many`, `read-only`, or `—` for root.
+
+## What Belongs in the Boundary Table
+
+Include elements that are loaded, saved, or computed as part of this aggregate:
+- The root entity itself
+- Entities or collections fetched and persisted with the root (e.g., Stakeholder M:N on Task)
+- Value objects composed inline (e.g., StatSnapshot within StatHistory)
+- Derived/computed value objects (e.g., DerivedStatus on Task)
+
+Do NOT include bare ID-only cross-aggregate references. If an entity stores another aggregate's ID as a foreign key (e.g., ParentContainerId, ProjectId), that is an attribute in `entities.md`, not a boundary table element.
 
 ## Rules
 
