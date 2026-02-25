@@ -17,12 +17,21 @@ DDD documentation is split into separate files by concept type. Each file covers
 ```
 docs/flow/ddd/
   ubiquitous-language.md    ← domain glossary (table)
-  entities.md               ← entities with identity and lifecycle
-  value-objects.md          ← immutable types with no identity
-  aggregates.md             ← aggregate roots and their boundaries (planned)
+  classification.md         ← what is an entity, VO, or aggregate (phase 1)
+  entities.md               ← entities with identity and lifecycle (phase 2)
+  value-objects.md          ← immutable types with no identity (phase 2)
+  aggregates.md             ← aggregate roots and their boundaries (phase 2)
 ```
 
 When extracting or creating a specific file, produce ONLY that file. Do not add sections for other concept types. For example, when creating `entities.md`, do not add `## Value Objects` or `## Aggregates` sections — those belong in their own files.
+
+## Extraction Workflow
+
+Extracting entities, value objects, and aggregates requires a two-phase approach because they depend on each other:
+
+**Phase 1 — Classification:** Run the `ccf-flow-ddd-classify` command first. This scans the codebase and produces `docs/flow/ddd/classification.md`, which records what is an entity, what is a value object, what is an aggregate root, and how they relate. All cross-cutting decisions are made here.
+
+**Phase 2 — Per-file extraction:** Run the individual extractors (`ccf-flow-ddd-entity-extract`, `ccf-flow-ddd-vo-extract`, `ccf-flow-ddd-agg-extract`). Each reads `classification.md` to ensure consistency — using the same type names, the same entity/VO/aggregate assignments, and the same cross-references.
 
 ---
 
@@ -229,16 +238,145 @@ Each value object section must have exactly these parts in this order:
 
 ---
 
+## Classification (Phase 1)
+
+File: `docs/flow/ddd/classification.md`
+
+This file is produced FIRST, before entities, value objects, or aggregates. It captures every cross-cutting decision: what is an entity, what is a value object, what is an aggregate root, and how they reference each other. The per-file extractors read this to stay consistent.
+
+### Format
+
+The file has a `# DDD Classification` heading, then two tables: Entities and Value Objects.
+
+```markdown
+# DDD Classification
+
+## Entities
+
+| Name | Aggregate Root | Contains | Uses VOs |
+|------|---------------|----------|----------|
+| Task | Yes | <ul><li>Stakeholder (ref, M:N)</li><li>Tag (ref, M:N)</li><li>Child Tasks (ref)</li></ul> | <ul><li>TaskStatus</li><li>DerivedStatus</li></ul> |
+| Project | Yes | — | — |
+| Stakeholder | Yes | — | <ul><li>StakeholderType</li></ul> |
+| TimeBlock | Yes | — | <ul><li>BlockCapacity (derived)</li></ul> |
+
+## Value Objects
+
+| Name | Kind | Owned By |
+|------|------|----------|
+| TaskStatus | Enum | Task |
+| StakeholderType | Enum | Stakeholder |
+| ContainerType | Enum | Container |
+| DerivedStatus | Derived | Task |
+| BlockCapacity | Derived | TimeBlock |
+| DayStats | Derived | — (computed at request time) |
+```
+
+THIS IS THE ONLY ACCEPTABLE FORMAT. Do not use any other format.
+
+### Column Rules — Entities Table
+
+- **Name**: PascalCase entity name.
+- **Aggregate Root**: `Yes` or `No`.
+- **Contains**: Other entities or references within this aggregate's boundary, using `<ul><li>`. Use `—` if none. Indicate relationship type (ref, M:N, child).
+- **Uses VOs**: Value objects used as attribute types, using `<ul><li>`. Use `—` if none.
+
+### Column Rules — Value Objects Table
+
+- **Name**: PascalCase VO name.
+- **Kind**: `Enum`, `Composite`, or `Derived`.
+- **Owned By**: The entity that primarily uses this VO, or `—` if shared/computed.
+
+### Structural Rules
+
+- Tables sorted alphabetically by Name
+- No implementation details: no file paths, table names, SQL types, HTTP endpoints, or code syntax
+- Every entity and value object in the codebase should appear in exactly one table
+- If unsure whether something is an entity or VO, classify it and add a note
+
+---
+
+## Aggregates
+
+File: `docs/flow/ddd/aggregates.md`
+
+This file contains aggregates ONLY. An aggregate defines a consistency boundary — what is loaded and saved as a unit. Do not include entity details or value object details — those have their own files. Read `classification.md` first for entity/VO assignments.
+
+### Format
+
+The file has a `# Aggregates` heading, then one `## AggregateName` section per aggregate. Each section has: a one-sentence description, a boundary table, and an invariants line. Nothing else.
+
+```markdown
+# Aggregates
+
+## Task
+
+The central unit of work and scheduling. Loaded and saved as a single unit with its stakeholder and tag associations.
+
+| Element | Type | Relationship |
+|---------|------|-------------|
+| Task | Root Entity | — |
+| Stakeholder | Entity (ref) | M:N via join, replaced on every write |
+| Tag | Entity (ref) | M:N via join, replaced on every write |
+| Child Tasks | Entity (ref) | One-to-many, read-only on parent |
+
+**Invariants:** <ul><li>Must have a non-empty name</li><li>Status must be a valid TaskStatus value</li><li>Cross-aggregate references (ProjectId, TimeBlockId) are by ID only</li></ul>
+
+---
+
+## Project
+
+A named grouping of tasks with optional nesting.
+
+| Element | Type | Relationship |
+|---------|------|-------------|
+| Project | Root Entity | — |
+
+**Invariants:** <ul><li>Name must not be empty</li><li>Root-level names must be unique per user</li><li>System projects cannot be modified or deleted</li></ul>
+```
+
+THIS IS THE ONLY ACCEPTABLE FORMAT. Do not use any other format.
+
+### Aggregate Section Rules
+
+Each aggregate section must have exactly these parts in this order:
+
+1. `## AggregateName` — heading
+2. One sentence description — what the aggregate represents and its consistency scope
+3. Boundary table with columns `Element | Type | Relationship`
+4. `**Invariants:**` followed by `<ul><li>` list of rules enforced at the aggregate boundary
+
+### Column Rules for Boundary Table
+
+- **Element**: PascalCase name of each entity or reference within the aggregate.
+- **Type**: `Root Entity`, `Entity`, `Entity (ref)`, or `Value Object`. Use `(ref)` for references that cross aggregate boundaries.
+- **Relationship**: How this element relates to the root: `M:N via join`, `One-to-many`, `read-only`, or `—` for the root itself.
+
+### Structural Rules
+
+- Aggregates sorted alphabetically by name
+- Sections separated by `---`
+- No entity attribute details — those live in `entities.md`
+- No value object details — those live in `value-objects.md`
+- No implementation details: no file paths, table names, SQL types, HTTP endpoints, or code syntax
+- The file contains ONLY aggregates — no entity sections, no VO sections, no notes sections
+
+---
+
 ## Agents
 
 | Agent | Command | Purpose |
 |-------|---------|---------|
-| `ccf-flow-ddd-ul-extractor` | `/ccf-flow-ddd-ul-extract` | Scans code and docs, produces the glossary |
-| `ccf-flow-ddd-ul-verifier` | `/ccf-flow-ddd-ul-verify` | Checks the glossary conforms to the format above |
-| `ccf-flow-ddd-entity-extractor` | `/ccf-flow-ddd-entity-extract` | Scans code and docs, produces the entities file |
-| `ccf-flow-ddd-entity-verifier` | `/ccf-flow-ddd-entity-verify` | Checks the entities file conforms to the format above |
-| `ccf-flow-ddd-vo-extractor` | `/ccf-flow-ddd-vo-extract` | Scans code and docs, produces the value objects file |
-| `ccf-flow-ddd-vo-verifier` | `/ccf-flow-ddd-vo-verify` | Checks the value objects file conforms to the format above |
+| — | `/ccf-flow-ddd-extract-all` | Chains all extractors sequentially (UL → classify → entities → VOs → aggregates) |
+| `ccf-flow-ddd-classifier` | `/ccf-flow-ddd-classify` | Phase 1: scans code, produces classification.md |
+| `ccf-flow-ddd-ul-extractor` | `/ccf-flow-ddd-ul-extract` | Produces the glossary |
+| `ccf-flow-ddd-ul-verifier` | `/ccf-flow-ddd-ul-verify` | Checks the glossary |
+| `ccf-flow-ddd-entity-extractor` | `/ccf-flow-ddd-entity-extract` | Phase 2: produces entities.md (reads classification.md) |
+| `ccf-flow-ddd-entity-verifier` | `/ccf-flow-ddd-entity-verify` | Checks entities.md |
+| `ccf-flow-ddd-vo-extractor` | `/ccf-flow-ddd-vo-extract` | Phase 2: produces value-objects.md (reads classification.md) |
+| `ccf-flow-ddd-vo-verifier` | `/ccf-flow-ddd-vo-verify` | Checks value-objects.md |
+| `ccf-flow-ddd-agg-extractor` | `/ccf-flow-ddd-agg-extract` | Phase 2: produces aggregates.md (reads classification.md) |
+| `ccf-flow-ddd-agg-verifier` | `/ccf-flow-ddd-agg-verify` | Checks aggregates.md |
 
 ## Verification
 
@@ -249,3 +387,5 @@ After creating or updating any DDD file, always run the corresponding verifier a
 See `references/ddd-ul-template.md` for ubiquitous language specification.
 See `references/ddd-entity-template.md` for entity specification.
 See `references/ddd-vo-template.md` for value object specification.
+See `references/ddd-classification-template.md` for classification specification.
+See `references/ddd-agg-template.md` for aggregate specification.

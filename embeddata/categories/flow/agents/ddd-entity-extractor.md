@@ -16,11 +16,14 @@ DDD documentation is split into separate files:
 
 ```
 docs/flow/ddd/
+  classification.md         ← READ THIS FIRST for entity/VO assignments
   ubiquitous-language.md    ← domain glossary
   entities.md               ← YOU ARE CREATING THIS FILE
-  aggregates.md             ← separate file (not your concern)
   value-objects.md          ← separate file (not your concern)
+  aggregates.md             ← separate file (not your concern)
 ```
+
+Read `docs/flow/ddd/classification.md` first if it exists. Use it to know which concepts are entities (not VOs), and which value object types to reference in attribute Type columns.
 
 You produce `entities.md` ONLY. Aggregates and value objects have their own files and their own extractors. Do not include them in your output.
 
