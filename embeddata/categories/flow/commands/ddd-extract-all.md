@@ -1,5 +1,5 @@
 ---
-description: Run full DDD extraction - ubiquitous language, classification, entities, value objects, aggregates. Chains sub-agents sequentially.
+description: Run full DDD extraction - ubiquitous language, classification, entities, value objects, aggregates, business rules. Chains sub-agents sequentially.
 ---
 
 Run the following DDD extraction steps in order. For each step, use the named sub-agent. Wait for each sub-agent to complete before starting the next. Do not do the work yourself — delegate to the sub-agent.
@@ -22,6 +22,12 @@ Use the `ccf-flow-ddd-agg-extractor` sub-agent to extract aggregates into `docs/
 ## Step 6: Cross-Reference Verification
 Use the `ccf-flow-ddd-xref-verifier` sub-agent to verify that all four files (classification, entities, value-objects, aggregates) are consistent with each other.
 
+## Step 7: Rule Extraction (Phase 1)
+Use the `ccf-flow-ddd-rules-extractor` sub-agent to scan the codebase for business rules. It must read classification.md, entities.md, value-objects.md, and aggregates.md first. Write `docs/flow/ddd/rules-extraction.md`.
+
+## Step 8: Rule Analysis (Phase 2)
+Use the `ccf-flow-ddd-rules-analyzer` sub-agent to analyze the raw rules and produce `docs/flow/ddd/business-rules.md`. It must read `rules-extraction.md` first.
+
 ## After all steps
 
 Print a summary:
@@ -35,6 +41,8 @@ DDD Extraction Complete
 4. Value Objects:       ✅/❌
 5. Aggregates:          ✅/❌
 6. Cross-Reference:     ✅/❌
+7. Rule Extraction:     ✅/❌
+8. Rule Analysis:       ✅/❌
 ```
 
 If any step fails, continue with the remaining steps. Note failures in the summary.

@@ -21,6 +21,8 @@ docs/flow/ddd/
   entities.md               ← entities with identity and lifecycle (phase 2)
   value-objects.md          ← immutable types with no identity (phase 2)
   aggregates.md             ← aggregate roots and their boundaries (phase 2)
+  rules-extraction.md       ← raw rule evidence from codebase (phase 1)
+  business-rules.md         ← analyzed rules with contradiction detection (phase 2)
 ```
 
 When extracting or creating a specific file, produce ONLY that file. Do not add sections for other concept types. For example, when creating `entities.md`, do not add `## Value Objects` or `## Aggregates` sections — those belong in their own files.
@@ -373,12 +375,173 @@ Include elements that are **loaded, saved, or computed as part of this aggregate
 
 ---
 
+## Business Rules
+
+Business rules extraction uses the same two-phase approach as structural extraction.
+
+### Phase 1 — Rule Extraction
+
+File: `docs/flow/ddd/rules-extraction.md`
+
+Scan the entire codebase for anything that enforces, validates, or constrains domain behavior. Collect raw evidence without analyzing or organizing it. Every rule found becomes a row in a flat table.
+
+#### Format
+
+```markdown
+# Rule Extraction
+
+| Rule | Aggregate | Source | Location | Detail |
+|------|-----------|--------|----------|--------|
+| Name must not be empty | Task | Validation | CreateTask handler | Returns error if name is empty string |
+| Name must not be empty | Task | Database | Schema/migration | NOT NULL constraint on name column |
+| MaxLoad >= 0 | TimeBlock | Validation | UpdateTimeBlock | Guard clause checks maxLoad >= 0 |
+| MaxLoad 0–1000 | TimeBlock | VO logic | BlockCapacity calculation | Caps effective capacity using maxLoad/100, maxLoad checked <= 1000 |
+| Email unique | User | Database | Schema/migration | UNIQUE constraint on email column |
+| Email unique | User | Validation | CreateUser | Checks for existing email before insert |
+| Deleted tasks excluded | Task | Query | Task repository | WHERE deleted_at IS NULL on all reads |
+| Cascade delete children | Task | Database | Schema/migration | ON DELETE CASCADE on parent_task_id FK |
+```
+
+THIS IS THE ONLY ACCEPTABLE FORMAT. Do not use any other format.
+
+#### Column Rules
+
+- **Rule**: Short, declarative statement of what must be true. Use domain language, not code.
+- **Aggregate**: Which aggregate this rule applies to. Use PascalCase entity name from classification.md.
+- **Source**: Where this evidence was found. Values: `Validation`, `Database`, `Query`, `VO logic`, `API`, `Frontend`, `Test`, `Documentation`, `Configuration`.
+- **Location**: Specific location in the codebase — function name, file area, or constraint name. Not a file path, but a descriptive location (e.g., "CreateTask handler", "task table schema", "task_test assertions").
+- **Detail**: Brief explanation of how the rule is enforced at this location.
+
+#### What to Look For
+
+- Guard clauses and validation checks in handlers/services
+- Database constraints: NOT NULL, UNIQUE, CHECK, FK, CASCADE
+- Query filters that are always applied (soft delete filters, user scoping)
+- Conditional logic that enforces state transitions
+- Error messages that imply business rules
+- Test assertions that verify expected behavior
+- Frontend validation (input masks, field limits, required fields)
+- Configuration or constants that define limits
+- Comments or documentation that state rules
+
+#### Structural Rules
+
+- One row per rule per source — the same rule enforced in two places gets two rows
+- Sort by Aggregate alphabetically, then by Rule alphabetically within each aggregate
+- No code snippets or file paths — use descriptive locations
+- Include rules even if they seem redundant with entity invariants — this is raw evidence collection
+
+### Phase 2 — Rule Analysis
+
+File: `docs/flow/ddd/business-rules.md`
+
+Read `rules-extraction.md` and group rules by aggregate. Cross-reference enforcement locations to detect contradictions, gaps, and partially enforced rules.
+
+#### Format
+
+```markdown
+# Business Rules
+
+## Task
+
+### Name must not be empty
+
+| Source | Location | Stated Rule |
+|--------|----------|-------------|
+| Validation | CreateTask handler | Name must not be empty |
+| Validation | UpdateTask handler | Name must not be empty |
+| Database | Task table schema | NOT NULL on name |
+
+**Status:** ✅ Consistent
+
+---
+
+### MaxLoad range
+
+| Source | Location | Stated Rule |
+|--------|----------|-------------|
+| Validation | UpdateTimeBlock handler | MaxLoad >= 0, no upper bound |
+| VO logic | BlockCapacity calculation | MaxLoad 0–1000 |
+
+**Status:** ⚠️ Contradiction — validation allows unbounded values, capacity calculation caps at 1000
+
+---
+
+## Cross-Aggregate Rules
+
+### Cascade delete on parent task
+
+| Source | Location | Stated Rule | Aggregates |
+|--------|----------|-------------|-----------|
+| Database | Task table FK | ON DELETE CASCADE on parent_task_id | Task |
+| Query | Task repository | Filters by parent when loading children | Task |
+
+**Status:** ✅ Consistent
+
+---
+
+## Summary
+
+| Status | Count |
+|--------|-------|
+| ✅ Consistent | 12 |
+| ⚠️ Contradiction | 2 |
+| ⚠️ Partial | 3 |
+| ❌ Unenforced | 1 |
+
+### Contradictions
+
+| Rule | Aggregates | Issue |
+|------|-----------|-------|
+| MaxLoad range | TimeBlock | Validation allows unbounded, VO caps at 1000 |
+
+### Gaps
+
+| Rule | Aggregates | Issue |
+|------|-----------|-------|
+| API name validation | Task | Database enforces NOT NULL but POST handler accepts empty |
+```
+
+THIS IS THE ONLY ACCEPTABLE FORMAT. Do not use any other format.
+
+#### Rule Section Rules
+
+Each rule section within an aggregate must have exactly these parts:
+
+1. `### Rule name` — short declarative statement
+2. Evidence table with columns `Source | Location | Stated Rule`
+3. `**Status:**` line with one of: `✅ Consistent`, `⚠️ Contradiction`, `⚠️ Partial`, `❌ Unenforced`
+4. For non-consistent statuses, a brief explanation after the status
+5. `---` separator before next rule
+
+#### Cross-Aggregate Rules Section
+
+Rules that span multiple aggregates go in `## Cross-Aggregate Rules`. Same format but the evidence table has an additional `Aggregates` column.
+
+#### Summary Section
+
+The file must end with a `## Summary` section containing:
+1. Status counts table
+2. `### Contradictions` — table listing each contradiction with aggregates and issue
+3. `### Gaps` — table listing each gap with aggregates and issue
+
+If no contradictions or gaps exist, state "None found."
+
+#### Status Definitions
+
+- **✅ Consistent** — all sources agree on the rule and it is enforced everywhere it should be
+- **⚠️ Contradiction** — different sources state different versions of the rule (e.g., different ranges, different allowed values)
+- **⚠️ Partial** — rule is enforced in some layers but missing in others where it should be (e.g., validated in backend but not in database, or vice versa)
+- **❌ Unenforced** — rule is documented, implied by naming, or stated in tests but not actually enforced in code
+
+---
+
 ## Commands
 
 | Command | Purpose |
 |---------|---------|
 | `/ccf-flow-ddd-extract-all` | Full pipeline: UL → classify → entities → VOs → aggregates → xref verify |
-| `/ccf-flow-ddd-extract <concept>` | Re-extract a single concept: `ul`, `classification`, `entities`, `value-objects`, `aggregates` |
+| `/ccf-flow-ddd-extract <concept>` | Re-extract a single concept: `ul`, `classification`, `entities`, `value-objects`, `aggregates`, `rules` |
 | `/ccf-flow-ddd-xref-verify` | Verify consistency across all DDD files after manual edits |
 
 ## Sub-Agents
@@ -396,6 +559,9 @@ These are invoked automatically by the commands above. Users do not need to call
 | `ccf-flow-ddd-vo-verifier` | Checks value-objects.md format |
 | `ccf-flow-ddd-agg-extractor` | Phase 2: produces aggregates.md |
 | `ccf-flow-ddd-agg-verifier` | Checks aggregates.md format |
+| `ccf-flow-ddd-rules-extractor` | Phase 1: produces rules-extraction.md |
+| `ccf-flow-ddd-rules-analyzer` | Phase 2: produces business-rules.md |
+| `ccf-flow-ddd-rules-verifier` | Checks business-rules.md format |
 | `ccf-flow-ddd-xref-verifier` | Cross-references all files for consistency |
 
 ## Verification
@@ -409,3 +575,5 @@ See `references/ddd-entity-template.md` for entity specification.
 See `references/ddd-vo-template.md` for value object specification.
 See `references/ddd-classification-template.md` for classification specification.
 See `references/ddd-agg-template.md` for aggregate specification.
+See `references/ddd-rules-extraction-template.md` for rule extraction specification.
+See `references/ddd-business-rules-template.md` for business rules specification.
