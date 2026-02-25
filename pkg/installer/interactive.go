@@ -375,11 +375,20 @@ func PreviewInstall(category string, fileType string) (bool, error) {
 		var displayName string
 
 		if file.Type == "skills" {
-			skillName := GenerateInstalledFilename(file.Category, file.Filename)
+			skillSourceName := file.Filename
+			if file.SkillName != "" {
+				skillSourceName = file.SkillName
+			}
+			skillName := GenerateInstalledFilename(file.Category, skillSourceName)
 			skillName = strings.TrimSuffix(skillName, ".md")
 			typeDir, _ := GetTypeDir(file.Type)
-			installPath = fmt.Sprintf("%s/%s/SKILL.md", typeDir, skillName)
-			displayName = fmt.Sprintf("%s/SKILL.md", skillName)
+			if file.SubPath != "" {
+				installPath = fmt.Sprintf("%s/%s/%s/%s", typeDir, skillName, file.SubPath, file.Filename)
+				displayName = fmt.Sprintf("%s/%s/%s", skillName, file.SubPath, file.Filename)
+			} else {
+				installPath = fmt.Sprintf("%s/%s/SKILL.md", typeDir, skillName)
+				displayName = fmt.Sprintf("%s/SKILL.md", skillName)
+			}
 		} else {
 			fileName := GenerateInstalledFilename(file.Category, file.Filename)
 			typeDir, _ := GetTypeDir(file.Type)

@@ -12,10 +12,12 @@ var CategoriesFS fs.FS
 
 // CategoryFile represents a file within a category
 type CategoryFile struct {
-	Category string
-	Type     string // "commands", "agents", or "skills"
-	Filename string
-	Content  []byte
+	Category  string
+	Type      string // "commands", "agents", or "skills"
+	Filename  string
+	SubPath   string // for skill support files: relative subdir (e.g., "references"); empty for top-level files
+	SkillName string // for skill support files: the source skill .md filename (e.g., "ddd-skill.md"); empty for main skill files
+	Content   []byte
 }
 
 // ListCategories returns all available categories
@@ -50,19 +52,75 @@ func ListCategoryFiles(category string) ([]CategoryFile, error) {
 			continue
 		}
 
-		for _, entry := range entries {
-			if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".md") {
-				content, err := fs.ReadFile(CategoriesFS, filepath.Join(typePath, entry.Name()))
-				if err != nil {
-					return nil, err
-				}
+		if fileType == "skills" {
+			// For skills, collect top-level skill files and subdirectory support files separately
+			var topLevelSkills []string
+			type subDirFile struct {
+				subPath  string
+				filename string
+				content  []byte
+			}
+			var subDirFiles []subDirFile
 
-				files = append(files, CategoryFile{
-					Category: category,
-					Type:     fileType,
-					Filename: entry.Name(),
-					Content:  content,
-				})
+			for _, entry := range entries {
+				if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".md") {
+					content, err := fs.ReadFile(CategoriesFS, filepath.Join(typePath, entry.Name()))
+					if err != nil {
+						return nil, err
+					}
+					topLevelSkills = append(topLevelSkills, entry.Name())
+					files = append(files, CategoryFile{
+						Category: category,
+						Type:     fileType,
+						Filename: entry.Name(),
+						Content:  content,
+					})
+				} else if entry.IsDir() {
+					subPath := entry.Name()
+					subEntries, err := fs.ReadDir(CategoriesFS, filepath.Join(typePath, subPath))
+					if err != nil {
+						continue
+					}
+					for _, subEntry := range subEntries {
+						if !subEntry.IsDir() && strings.HasSuffix(subEntry.Name(), ".md") {
+							content, err := fs.ReadFile(CategoriesFS, filepath.Join(typePath, subPath, subEntry.Name()))
+							if err != nil {
+								return nil, err
+							}
+							subDirFiles = append(subDirFiles, subDirFile{subPath, subEntry.Name(), content})
+						}
+					}
+				}
+			}
+
+			// Associate subdirectory files with each skill
+			for _, subFile := range subDirFiles {
+				for _, skillFilename := range topLevelSkills {
+					files = append(files, CategoryFile{
+						Category:  category,
+						Type:      fileType,
+						Filename:  subFile.filename,
+						SubPath:   subFile.subPath,
+						SkillName: skillFilename,
+						Content:   subFile.content,
+					})
+				}
+			}
+		} else {
+			for _, entry := range entries {
+				if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".md") {
+					content, err := fs.ReadFile(CategoriesFS, filepath.Join(typePath, entry.Name()))
+					if err != nil {
+						return nil, err
+					}
+
+					files = append(files, CategoryFile{
+						Category: category,
+						Type:     fileType,
+						Filename: entry.Name(),
+						Content:  content,
+					})
+				}
 			}
 		}
 	}
@@ -99,19 +157,73 @@ func ListTypeFiles(category, fileType string) ([]CategoryFile, error) {
 		return nil, err
 	}
 
-	for _, entry := range entries {
-		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".md") {
-			content, err := fs.ReadFile(CategoriesFS, filepath.Join(typePath, entry.Name()))
-			if err != nil {
-				return nil, err
-			}
+	if fileType == "skills" {
+		var topLevelSkills []string
+		type subDirFile struct {
+			subPath  string
+			filename string
+			content  []byte
+		}
+		var subDirFiles []subDirFile
 
-			files = append(files, CategoryFile{
-				Category: category,
-				Type:     fileType,
-				Filename: entry.Name(),
-				Content:  content,
-			})
+		for _, entry := range entries {
+			if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".md") {
+				content, err := fs.ReadFile(CategoriesFS, filepath.Join(typePath, entry.Name()))
+				if err != nil {
+					return nil, err
+				}
+				topLevelSkills = append(topLevelSkills, entry.Name())
+				files = append(files, CategoryFile{
+					Category: category,
+					Type:     fileType,
+					Filename: entry.Name(),
+					Content:  content,
+				})
+			} else if entry.IsDir() {
+				subPath := entry.Name()
+				subEntries, err := fs.ReadDir(CategoriesFS, filepath.Join(typePath, subPath))
+				if err != nil {
+					continue
+				}
+				for _, subEntry := range subEntries {
+					if !subEntry.IsDir() && strings.HasSuffix(subEntry.Name(), ".md") {
+						content, err := fs.ReadFile(CategoriesFS, filepath.Join(typePath, subPath, subEntry.Name()))
+						if err != nil {
+							return nil, err
+						}
+						subDirFiles = append(subDirFiles, subDirFile{subPath, subEntry.Name(), content})
+					}
+				}
+			}
+		}
+
+		for _, subFile := range subDirFiles {
+			for _, skillFilename := range topLevelSkills {
+				files = append(files, CategoryFile{
+					Category:  category,
+					Type:      fileType,
+					Filename:  subFile.filename,
+					SubPath:   subFile.subPath,
+					SkillName: skillFilename,
+					Content:   subFile.content,
+				})
+			}
+		}
+	} else {
+		for _, entry := range entries {
+			if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".md") {
+				content, err := fs.ReadFile(CategoriesFS, filepath.Join(typePath, entry.Name()))
+				if err != nil {
+					return nil, err
+				}
+
+				files = append(files, CategoryFile{
+					Category: category,
+					Type:     fileType,
+					Filename: entry.Name(),
+					Content:  content,
+				})
+			}
 		}
 	}
 

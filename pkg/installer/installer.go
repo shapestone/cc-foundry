@@ -93,16 +93,30 @@ func InstallFile(file embedpkg.CategoryFile, st *state.State) error {
 	var installedPath, displayPath, installedFilename string
 
 	if file.Type == "skills" {
-		// Skills: subdirectory with SKILL.md
-		skillName := GenerateInstalledFilename(file.Category, file.Filename)
-		skillName = strings.TrimSuffix(skillName, ".md") // Remove .md extension
+		// Determine which skill this file belongs to
+		skillSourceName := file.Filename
+		if file.SkillName != "" {
+			skillSourceName = file.SkillName
+		}
+		skillName := GenerateInstalledFilename(file.Category, skillSourceName)
+		skillName = strings.TrimSuffix(skillName, ".md")
 		skillDir := filepath.Join(typeDir, skillName)
-		installedPath = filepath.Join(skillDir, "SKILL.md")
-		installedFilename = filepath.Join(skillName, "SKILL.md")
 
-		// Create skill subdirectory
-		if err := os.MkdirAll(skillDir, 0755); err != nil {
-			return fmt.Errorf("failed to create skill directory %s: %w", skillDir, err)
+		if file.SubPath != "" {
+			// Support file: install into a subdirectory of the skill dir
+			subDir := filepath.Join(skillDir, file.SubPath)
+			installedPath = filepath.Join(subDir, file.Filename)
+			installedFilename = filepath.Join(skillName, file.SubPath, file.Filename)
+			if err := os.MkdirAll(subDir, 0755); err != nil {
+				return fmt.Errorf("failed to create skill subdir %s: %w", subDir, err)
+			}
+		} else {
+			// Main skill file: install as SKILL.md
+			installedPath = filepath.Join(skillDir, "SKILL.md")
+			installedFilename = filepath.Join(skillName, "SKILL.md")
+			if err := os.MkdirAll(skillDir, 0755); err != nil {
+				return fmt.Errorf("failed to create skill directory %s: %w", skillDir, err)
+			}
 		}
 	} else {
 		// Commands and agents: flat .md files
@@ -359,14 +373,20 @@ func InstallAll() error {
 
 // RemoveInstallation removes a single installed file
 func RemoveInstallation(installation state.Installation) error {
-	// For skills, remove the entire subdirectory
+	// For skills, remove the entire subdirectory when removing the main SKILL.md;
+	// support files (references, etc.) are already removed by that RemoveAll.
 	if installation.Type == "skills" {
-		// Path is like: ~/.claude/skills/ccf-development-oss-project-setup/SKILL.md
-		// We want to remove: ~/.claude/skills/ccf-development-oss-project-setup/
-		skillDir := filepath.Dir(installation.InstalledPath)
-
-		if err := os.RemoveAll(skillDir); err != nil && !os.IsNotExist(err) {
-			return fmt.Errorf("failed to remove skill directory %s: %w", skillDir, err)
+		if filepath.Base(installation.InstalledPath) == "SKILL.md" {
+			// Main skill file: remove the entire skill directory
+			skillDir := filepath.Dir(installation.InstalledPath)
+			if err := os.RemoveAll(skillDir); err != nil && !os.IsNotExist(err) {
+				return fmt.Errorf("failed to remove skill directory %s: %w", skillDir, err)
+			}
+		} else {
+			// Support file: remove individually (may already be gone via skill dir RemoveAll)
+			if err := os.Remove(installation.InstalledPath); err != nil && !os.IsNotExist(err) {
+				return fmt.Errorf("failed to remove file %s: %w", installation.InstalledPath, err)
+			}
 		}
 	} else {
 		// For commands and agents, just remove the file
