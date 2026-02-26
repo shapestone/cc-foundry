@@ -23,6 +23,8 @@ docs/flow/ddd/
   aggregates.md             ← aggregate roots and their boundaries (phase 2)
   rules-extraction.md       ← raw rule evidence from codebase (phase 1)
   business-rules.md         ← analyzed rules with contradiction detection (phase 2)
+  commands-extraction.md    ← raw command evidence from codebase (phase 1)
+  commands.md               ← analyzed commands with coverage detection (phase 2)
 ```
 
 When extracting or creating a specific file, produce ONLY that file. Do not add sections for other concept types. For example, when creating `entities.md`, do not add `## Value Objects` or `## Aggregates` sections — those belong in their own files.
@@ -536,12 +538,188 @@ If no contradictions or gaps exist, state "None found."
 
 ---
 
-## Commands
+## Domain Commands
+
+Domain command extraction uses the same two-phase approach as rules extraction.
+
+### Phase 1 — Command Extraction
+
+File: `docs/flow/ddd/commands-extraction.md`
+
+Scan the codebase for every operation that changes aggregate state. Collect raw evidence: what the command does, which aggregate it targets, what parameters it takes, and where it's invoked.
+
+#### Format
+
+```markdown
+# Command Extraction
+
+| Command | Aggregate | Source | Location | Parameters | Outcome |
+|---------|-----------|--------|----------|------------|---------|
+| CreateTask | Task | API | POST handler | Name, Status, DueDate, ScheduledDate, ProjectId | Creates a new task with defaults applied |
+| UpdateTaskStatus | Task | API | PATCH status handler | Status | Changes status, triggers time tracking side effects |
+| UpdateTaskStatus | Task | Frontend | TasksView status picker | Status | Also sets timeTrackingStart/End based on transition direction |
+| SoftDeleteTask | Task | API | DELETE handler | TaskId | Sets deleted_at timestamp, excludes from normal queries |
+| RestoreTask | Task | API | POST restore handler | TaskId | Clears deleted_at, returns task to active list |
+| ReorderTasks | Task | API | PUT reorder handler | TaskId, Order | Updates sort position within block or list |
+| AssignStakeholders | Task | API | PUT stakeholders handler | TaskId, StakeholderIds | Replaces all stakeholder associations |
+```
+
+THIS IS THE ONLY ACCEPTABLE FORMAT. Do not use any other format.
+
+#### Column Rules
+
+- **Command**: PascalCase verb-noun name describing the operation. Derive from the code — use the handler/function name as a guide, normalized to domain language.
+- **Aggregate**: PascalCase entity name from classification.md.
+- **Source**: Where this command is implemented: `API`, `Frontend`, `Backend service`, `Scheduler`, `Migration`, `Seed`.
+- **Location**: Descriptive location — handler name, function name, component name. Not a file path.
+- **Parameters**: Comma-separated list of input parameters in domain terms. Use PascalCase attribute names from entities.md.
+- **Outcome**: Brief description of what the command does — what state changes.
+
+#### What to Scan
+
+- API route handlers (POST, PUT, PATCH, DELETE)
+- Frontend action functions that call the API
+- Background jobs or schedulers that modify state
+- Migration scripts that transform data
+- Seed scripts that create initial data
+- Service methods that orchestrate multiple changes
+
+#### Structural Rules
+
+- One row per command per source — same command in API and frontend gets two rows
+- Sort by Aggregate alphabetically, then by Command within aggregate
+- Use domain language, not implementation names
+- Include commands even if they seem like simple CRUD — the analysis phase decides what's meaningful
+
+### Phase 2 — Command Analysis
+
+File: `docs/flow/ddd/commands.md`
+
+Read `commands-extraction.md` and group by aggregate. Cross-reference with entities.md Behavior lines to detect coverage gaps.
+
+#### Format
+
+```markdown
+# Commands
+
+## Task
+
+### CreateTask
+
+Creates a new task with a name and optional scheduling, project, and container associations.
+
+| Source | Location | Parameters |
+|--------|----------|------------|
+| API | POST handler | Name, Status, DueDate, ScheduledDate, ProjectId, ParentContainerId, ParentTaskId |
+| Frontend | TaskCreateModal | Name, Status, DueDate, ScheduledDate, ProjectId |
+| Frontend | TasksView inline add | Name, ScheduledDate, ScheduledTimeBlockId |
+
+**Behavior mapping:** Create
+**Validation:** Name must not be empty; Status defaults to pending
+**Side effects:** None
+
+**Status:** ✅ Documented
+
+---
+
+### UpdateTaskStatus
+
+Transitions a task to a new lifecycle status, triggering time tracking side effects.
+
+| Source | Location | Parameters |
+|--------|----------|------------|
+| API | PATCH status handler | Status |
+| Frontend | TasksView status picker | Status |
+
+**Behavior mapping:** UpdateStatus
+**Validation:** Status must be a valid TaskStatus value
+**Side effects:** <ul><li>Pending → InProgress: sets TimeTrackingStart</li><li>InProgress → Completed: sets TimeTrackingEnd</li></ul>
+
+**Status:** ✅ Documented
+
+---
+
+### BatchReorderTasks
+
+Reorders multiple tasks within a block or list in a single operation.
+
+| Source | Location | Parameters |
+|--------|----------|------------|
+| API | PUT reorder handler | List<TaskId, Order> |
+
+**Behavior mapping:** ⚠️ None — no Behavior line in entities.md covers batch reorder
+
+**Status:** ⚠️ Undocumented
+
+---
+
+## Summary
+
+| Status | Count |
+|--------|-------|
+| ✅ Documented | 18 |
+| ⚠️ Undocumented | 3 |
+| ⚠️ Orphaned | 1 |
+| ❌ Dead | 0 |
+
+### Undocumented Commands
+
+| Command | Aggregate | Issue |
+|---------|-----------|-------|
+| BatchReorderTasks | Task | API endpoint exists but no Behavior line in entities.md |
+
+### Orphaned Behaviors
+
+| Behavior | Aggregate | Issue |
+|----------|-----------|-------|
+| Cancel | Task | Listed in entities.md Behavior but no command implementation found |
+
+### Dead Commands
+
+None found.
+```
+
+THIS IS THE ONLY ACCEPTABLE FORMAT. Do not use any other format.
+
+#### Command Section Rules
+
+Each command section within an aggregate must have exactly these parts:
+
+1. `### CommandName` — PascalCase verb+noun heading
+2. One sentence description of what the command does in domain terms
+3. Evidence table with columns `Source | Location | Parameters`
+4. `**Behavior mapping:**` — Behavior name from entities.md, or `⚠️ None` if undocumented
+5. `**Validation:**` — what is validated before execution
+6. `**Side effects:**` — other changes triggered, using `<ul><li>` for multiple. `None` if none.
+7. `**Status:**` line
+8. `---` separator
+
+#### Summary Section
+
+The file must end with `## Summary` containing:
+
+1. Status counts table — `Status | Count`
+2. `### Undocumented Commands` — commands with no matching Behavior
+3. `### Orphaned Behaviors` — Behavior lines with no matching command
+4. `### Dead Commands` — unreachable code paths
+
+If none exist in a category, state "None found."
+
+#### Status Definitions
+
+- **✅ Documented** — command exists in code and maps to a Behavior line in entities.md
+- **⚠️ Undocumented** — command exists in code but no Behavior line covers it
+- **⚠️ Orphaned** — Behavior line exists in entities.md but no command implementation found
+- **❌ Dead** — code path exists but is unreachable or unused
+
+---
+
+## CLI Commands
 
 | Command | Purpose |
 |---------|---------|
-| `/ccf-flow-ddd-extract-all` | Full pipeline: UL → classify → entities → VOs → aggregates → xref verify |
-| `/ccf-flow-ddd-extract <concept>` | Re-extract a single concept: `ul`, `classification`, `entities`, `value-objects`, `aggregates`, `rules` |
+| `/ccf-flow-ddd-extract-all` | Full pipeline: UL → classify → entities → VOs → aggregates → rules → commands → xref verify |
+| `/ccf-flow-ddd-extract <concept>` | Re-extract a single concept: `ul`, `classification`, `entities`, `value-objects`, `aggregates`, `rules`, `commands` |
 | `/ccf-flow-ddd-xref-verify` | Verify consistency across all DDD files after manual edits |
 
 ## Sub-Agents
@@ -562,6 +740,9 @@ These are invoked automatically by the commands above. Users do not need to call
 | `ccf-flow-ddd-rules-extractor` | Phase 1: produces rules-extraction.md |
 | `ccf-flow-ddd-rules-analyzer` | Phase 2: produces business-rules.md |
 | `ccf-flow-ddd-rules-verifier` | Checks business-rules.md format |
+| `ccf-flow-ddd-commands-extractor` | Phase 1: produces commands-extraction.md |
+| `ccf-flow-ddd-commands-analyzer` | Phase 2: produces commands.md |
+| `ccf-flow-ddd-commands-verifier` | Checks commands.md format |
 | `ccf-flow-ddd-xref-verifier` | Cross-references all files for consistency |
 
 ## Verification
@@ -577,3 +758,5 @@ See `references/ddd-classification-template.md` for classification specification
 See `references/ddd-agg-template.md` for aggregate specification.
 See `references/ddd-rules-extraction-template.md` for rule extraction specification.
 See `references/ddd-business-rules-template.md` for business rules specification.
+See `references/ddd-commands-extraction-template.md` for command extraction specification.
+See `references/ddd-commands-template.md` for domain commands specification.
