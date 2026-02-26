@@ -25,6 +25,8 @@ docs/flow/ddd/
   business-rules.md         ← analyzed rules with contradiction detection (phase 2)
   commands-extraction.md    ← raw command evidence from codebase (phase 1)
   commands.md               ← analyzed commands with coverage detection (phase 2)
+  events-extraction.md      ← raw event/side-effect evidence from codebase (phase 1)
+  events.md                 ← analyzed events with cascade detection (phase 2)
 ```
 
 When extracting or creating a specific file, produce ONLY that file. Do not add sections for other concept types. For example, when creating `entities.md`, do not add `## Value Objects` or `## Aggregates` sections — those belong in their own files.
@@ -714,12 +716,159 @@ If none exist in a category, state "None found."
 
 ---
 
+## Domain Events
+
+Domain event extraction uses the same two-phase approach as rules and commands extraction.
+
+### Phase 1 — Event Extraction
+
+File: `docs/flow/ddd/events-extraction.md`
+
+Scan the codebase for every side effect, cascade, reaction, and published event that happens as a consequence of a command. Collect raw evidence: what happened, what triggered it, which aggregate is affected, and where the effect originates.
+
+#### Format
+
+```markdown
+# Event Extraction
+
+| Event | Trigger | Aggregate | Source | Location | Detail |
+|-------|---------|-----------|--------|----------|--------|
+| TaskCreated | CreateTask | Task | Frontend | tasks store createTask | logEvent fired with taskId, name, scheduledTimeBlockId, projectId |
+| StakeholdersReplaced | CreateTask | Task | API | POST handler | task_stakeholders join rows deleted and reinserted in same transaction |
+| TimeTrackingStarted | UpdateTask | Task | Frontend | TasksView status picker | Sets timeTrackingStart when status transitions to InProgress |
+| ChildTasksCascadeDeleted | HardDeleteTask | Task | Database | parent_task_id FK CASCADE | ON DELETE CASCADE removes child rows |
+| ProjectReferencesNulled | SoftDeleteProject | Project | Database | task project_id FK SET NULL | Task project_id set to null when project deleted |
+```
+
+THIS IS THE ONLY ACCEPTABLE FORMAT. Do not use any other format.
+
+#### Column Rules
+
+- **Event**: PascalCase past-tense name describing what happened. `TaskCreated` not `CreateTask`.
+- **Trigger**: PascalCase command name from commands.md that causes this event.
+- **Aggregate**: PascalCase entity name from classification.md that is affected.
+- **Source**: Where the side effect originates: `API`, `Frontend`, `Backend`, `Database`, `Scheduler`, `Migration`.
+- **Location**: Descriptive location — handler name, FK constraint name, component name. NOT a file path.
+- **Detail**: How the side effect manifests. One or two sentences.
+
+#### What to Scan
+
+- Explicit event publications (logEvent calls, event bus emissions, message queue publishes)
+- Database cascades (ON DELETE CASCADE, ON DELETE SET NULL, ON UPDATE CASCADE)
+- Transactional side effects (join table replacements, timestamp mutations, computed field updates)
+- Frontend reactions to command completion (store mutations, refetches, navigation)
+- Backend reactions (scheduled cleanup, background processing)
+- Implicit state transitions (timestamp mutations during status changes)
+
+#### Structural Rules
+
+- One row per event per source — same event from Database and Frontend gets two rows
+- Sort by Aggregate alphabetically, then by Event within aggregate
+- Use past-tense domain language for Event names
+- Trigger must match a Command name from commands-extraction.md
+- No file paths — use descriptive locations
+
+### Phase 2 — Event Analysis
+
+File: `docs/flow/ddd/events.md`
+
+Read `events-extraction.md` and group by aggregate. Cross-reference with commands.md to map triggers. Classify events as explicit, implicit, silent, or undocumented.
+
+#### Format
+
+```markdown
+# Events
+
+## Task
+
+### TaskCreated
+
+A new task has been inserted into the database with all associated stakeholder and tag joins.
+
+| Trigger | Source | Location | Detail |
+|---------|--------|----------|--------|
+| CreateTask | Frontend | tasks store createTask | logEvent fired with taskId, name, scheduledTimeBlockId, projectId |
+| CreateTask | API | POST handler | Stakeholder and tag join rows inserted in same transaction |
+
+**Triggered by:** CreateTask
+**Event type:** ✅ Explicit — published via logEvent
+**Subscribers:** None — logEvent is fire-and-forget to EventLog; no other system reacts
+**Cascade effects:** None
+
+**Status:** ✅ Explicit
+
+---
+
+## Summary
+
+| Status | Count |
+|--------|-------|
+| ✅ Explicit | 8 |
+| ⚠️ Implicit | 12 |
+| ⚠️ Silent | 5 |
+| ❌ Undocumented | 2 |
+
+### Implicit Events
+
+| Event | Aggregate | Trigger | Issue |
+|-------|-----------|---------|-------|
+| TimeTrackingStarted | Task | UpdateTask | Timestamp set as side effect with no named event |
+
+### Silent Cascades
+
+| Event | Aggregate | Trigger | Issue |
+|-------|-----------|---------|-------|
+| ChildTasksCascadeDeleted | Task | HardDeleteTask | DB cascade with no application awareness |
+
+### Undocumented Events
+
+| Event | Aggregate | Trigger | Issue |
+|-------|-----------|---------|-------|
+| StakeholderOrphaned | Stakeholder | DeleteTask | Stakeholder may lose all task associations |
+```
+
+THIS IS THE ONLY ACCEPTABLE FORMAT. Do not use any other format.
+
+#### Event Section Rules
+
+Each event section within an aggregate must have exactly these parts:
+
+1. `### EventName` — PascalCase past-tense heading
+2. One sentence description
+3. Evidence table with columns `Trigger | Source | Location | Detail`
+4. `**Triggered by:**` — which command(s) cause this event
+5. `**Event type:**` — one of the four status values with brief explanation
+6. `**Subscribers:**` — what reacts to this event, or `None`
+7. `**Cascade effects:**` — further changes, using `<ul><li>` for multiple. `None` if none.
+8. `**Status:**` line
+9. `---` separator
+
+#### Summary Section
+
+The file must end with `## Summary` containing:
+
+1. Status counts table — `Status | Count`
+2. `### Implicit Events` — events that happen but aren't named
+3. `### Silent Cascades` — DB-level cascades the application doesn't know about
+4. `### Undocumented Events` — side effects not mentioned in documentation
+
+If none exist in a category, state "None found."
+
+#### Status Definitions
+
+- **✅ Explicit** — event is named and published via an event mechanism (logEvent, event bus, message queue)
+- **⚠️ Implicit** — side effect happens as part of a command but is not modeled as a named event
+- **⚠️ Silent** — cascade happens at the database level with no application-layer awareness
+- **❌ Undocumented** — side effect found in code but not mentioned in any documentation or entity model
+
+---
+
 ## CLI Commands
 
 | Command | Purpose |
 |---------|---------|
-| `/ccf-flow-ddd-extract-all` | Full pipeline: UL → classify → entities → VOs → aggregates → rules → commands → xref verify |
-| `/ccf-flow-ddd-extract <concept>` | Re-extract a single concept: `ul`, `classification`, `entities`, `value-objects`, `aggregates`, `rules`, `commands` |
+| `/ccf-flow-ddd-extract-all` | Full pipeline: UL → classify → entities → VOs → aggregates → rules → commands → events → xref verify |
+| `/ccf-flow-ddd-extract <concept>` | Re-extract a single concept: `ul`, `classification`, `entities`, `value-objects`, `aggregates`, `rules`, `commands`, `events` |
 | `/ccf-flow-ddd-xref-verify` | Verify consistency across all DDD files after manual edits |
 
 ## Sub-Agents
@@ -743,6 +892,9 @@ These are invoked automatically by the commands above. Users do not need to call
 | `ccf-flow-ddd-commands-extractor` | Phase 1: produces commands-extraction.md |
 | `ccf-flow-ddd-commands-analyzer` | Phase 2: produces commands.md |
 | `ccf-flow-ddd-commands-verifier` | Checks commands.md format |
+| `ccf-flow-ddd-events-extractor` | Phase 1: produces events-extraction.md |
+| `ccf-flow-ddd-events-analyzer` | Phase 2: produces events.md |
+| `ccf-flow-ddd-events-verifier` | Checks events.md format |
 | `ccf-flow-ddd-xref-verifier` | Cross-references all files for consistency |
 
 ## Verification
@@ -760,3 +912,5 @@ See `references/ddd-rules-extraction-template.md` for rule extraction specificat
 See `references/ddd-business-rules-template.md` for business rules specification.
 See `references/ddd-commands-extraction-template.md` for command extraction specification.
 See `references/ddd-commands-template.md` for domain commands specification.
+See `references/ddd-events-extraction-template.md` for event extraction specification.
+See `references/ddd-events-template.md` for domain events specification.

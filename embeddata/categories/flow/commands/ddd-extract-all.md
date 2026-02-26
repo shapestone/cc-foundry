@@ -1,5 +1,5 @@
 ---
-description: Run full DDD extraction - ubiquitous language, classification, entities, value objects, aggregates, business rules, domain commands. Chains sub-agents sequentially.
+description: Run full DDD extraction - ubiquitous language, classification, entities, value objects, aggregates, business rules, domain commands, domain events. Chains sub-agents sequentially.
 ---
 
 Run the following DDD extraction steps in order. For each step, use the named sub-agent. Wait for each sub-agent to complete before starting the next. Do not do the work yourself — delegate to the sub-agent.
@@ -34,6 +34,12 @@ Use the `ccf-flow-ddd-commands-extractor` sub-agent to scan the codebase for sta
 ## Step 10: Command Analysis (Phase 2)
 Use the `ccf-flow-ddd-commands-analyzer` sub-agent to analyze raw commands and produce `docs/flow/ddd/commands.md`. It must read `commands-extraction.md` and `entities.md` first.
 
+## Step 11: Event Extraction (Phase 1)
+Use the `ccf-flow-ddd-events-extractor` sub-agent to scan the codebase for side effects, cascades, and published events. It must read classification.md, entities.md, aggregates.md, commands-extraction.md, and commands.md first. Write `docs/flow/ddd/events-extraction.md`.
+
+## Step 12: Event Analysis (Phase 2)
+Use the `ccf-flow-ddd-events-analyzer` sub-agent to analyze raw events and produce `docs/flow/ddd/events.md`. It must read `events-extraction.md` and `commands.md` first.
+
 ## After all steps
 
 Print a summary:
@@ -51,6 +57,8 @@ DDD Extraction Complete
 8. Rule Analysis:       ✅/❌
 9. Command Extraction:  ✅/❌
 10. Command Analysis:   ✅/❌
+11. Event Extraction:   ✅/❌
+12. Event Analysis:     ✅/❌
 ```
 
 If any step fails, continue with the remaining steps. Note failures in the summary.

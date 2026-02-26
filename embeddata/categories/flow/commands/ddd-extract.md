@@ -1,6 +1,6 @@
 ---
-description: Extract a single DDD concept. Pass the concept name as an argument - ubiquitous-language, classification, entities, value-objects, aggregates, rules, or commands.
-argument-hint: <concept> e.g. entities, value-objects, aggregates, classification, ubiquitous-language, rules, commands
+description: Extract a single DDD concept. Pass the concept name as an argument - ubiquitous-language, classification, entities, value-objects, aggregates, rules, commands, or events.
+argument-hint: <concept> e.g. entities, value-objects, aggregates, classification, ubiquitous-language, rules, commands, events
 ---
 
 Extract a single DDD documentation file based on the argument provided.
@@ -20,6 +20,9 @@ Then use the corresponding sub-agent:
 - **commands** or **cmd** or **cmds** → Run TWO sub-agents in sequence:
   1. Use the `ccf-flow-ddd-commands-extractor` sub-agent to produce `docs/flow/ddd/commands-extraction.md`. It must first read the template at `.claude/skills/ccf-flow-ddd-skills/references/ddd-commands-extraction-template.md`, then read classification.md, entities.md, value-objects.md, and aggregates.md. The output must be a single flat table — no sections, no grouping, no file paths.
   2. Then use the `ccf-flow-ddd-commands-analyzer` sub-agent to produce `docs/flow/ddd/commands.md`. It must first read the template at `.claude/skills/ccf-flow-ddd-skills/references/ddd-commands-template.md`, then read `commands-extraction.md` and `entities.md`. The output must use the exact field names from the template: `**Behavior mapping:**`, `**Validation:**`, `**Side effects:**`, `**Status:**`.
+- **events** or **domain-events** → Run TWO sub-agents in sequence:
+  1. Use the `ccf-flow-ddd-events-extractor` sub-agent to produce `docs/flow/ddd/events-extraction.md`. It must first read the template at `.claude/skills/ccf-flow-ddd-skills/references/ddd-events-extraction-template.md`, then read classification.md, entities.md, aggregates.md, commands-extraction.md, and commands.md. The output must be a single flat table — no sections, no grouping, no file paths.
+  2. Then use the `ccf-flow-ddd-events-analyzer` sub-agent to produce `docs/flow/ddd/events.md`. It must first read the template at `.claude/skills/ccf-flow-ddd-skills/references/ddd-events-template.md`, then read `events-extraction.md` and `commands.md`. The output must use the exact field names from the template: `**Triggered by:**`, `**Event type:**`, `**Subscribers:**`, `**Cascade effects:**`, `**Status:**`.
 
 If the argument is empty or doesn't match any concept, list the valid options and ask the user to try again.
 
