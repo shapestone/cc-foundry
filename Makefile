@@ -82,7 +82,7 @@ generate-manifest: ## Generate manifest.json and bundle.tar.gz from files/
 
 # Build targets
 .PHONY: build
-build: generate-manifest ## Build the application (development, no signing for speed)
+build: ## Build the application (development, no signing for speed)
 	@echo "Building $(PROJECT_NAME) for $(DETECTED_OS)..."
 	@$(MKDIR) $(BIN_DIR)
 	$(GOBUILD) $(BUILD_FLAGS) -o $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT) ./$(CMD_DIR)
@@ -90,7 +90,7 @@ build: generate-manifest ## Build the application (development, no signing for s
 	@echo "Note: For signed/notarized build, use 'make build-signed' or 'make release'"
 
 .PHONY: build-signed
-build-signed: generate-manifest ## Build and sign with Developer ID (no notarization)
+build-signed: ## Build and sign with Developer ID (no notarization)
 	@echo "Building $(PROJECT_NAME) for $(DETECTED_OS)..."
 	@$(MKDIR) $(BIN_DIR)
 	$(GOBUILD) $(BUILD_FLAGS) -o $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT) ./$(CMD_DIR)
@@ -114,7 +114,7 @@ else
 endif
 
 .PHONY: build-prod
-build-prod: generate-manifest ## Build optimized production binary
+build-prod: ## Build optimized production binary
 	@echo "Building $(PROJECT_NAME) (production) for $(DETECTED_OS)..."
 	@$(MKDIR) $(BIN_DIR)
 	$(GOBUILD) $(PROD_BUILD_FLAGS) -o $(BIN_DIR)/$(PROJECT_NAME)$(EXE_EXT) ./$(CMD_DIR)
@@ -128,7 +128,7 @@ endif
 
 # Cross-platform builds
 .PHONY: build-all
-build-all: generate-manifest build-linux build-darwin-amd64 build-darwin-arm64 build-windows ## Build for all platforms
+build-all: build-linux build-darwin-amd64 build-darwin-arm64 build-windows ## Build for all platforms
 
 .PHONY: build-linux
 build-linux: ## Build for Linux x64
