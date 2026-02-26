@@ -27,6 +27,8 @@ docs/flow/ddd/
   commands.md               ← analyzed commands with coverage detection (phase 2)
   events-extraction.md      ← raw event/side-effect evidence from codebase (phase 1)
   events.md                 ← analyzed events with cascade detection (phase 2)
+  contexts-extraction.md    ← raw coupling evidence between aggregates (phase 1)
+  contexts.md               ← proposed bounded contexts with coupling map (phase 2)
 ```
 
 When extracting or creating a specific file, produce ONLY that file. Do not add sections for other concept types. For example, when creating `entities.md`, do not add `## Value Objects` or `## Aggregates` sections — those belong in their own files.
@@ -863,12 +865,129 @@ If none exist in a category, state "None found."
 
 ---
 
+## Bounded Contexts
+
+Bounded context extraction uses the same two-phase approach. Unlike other concepts, contexts are interpretive — they propose architectural boundaries based on coupling evidence rather than documenting code directly.
+
+### Phase 1 — Context Extraction
+
+File: `docs/flow/ddd/contexts-extraction.md`
+
+Scan the codebase and existing DDD files for coupling signals between aggregates — FK relationships, shared transactions, cross-aggregate events, shared concepts, and module boundaries.
+
+#### Format
+
+```markdown
+# Context Extraction
+
+| Signal | Type | From | To | Source | Location | Detail |
+|--------|------|------|----|--------|----------|--------|
+| Task references Project via FK | Data coupling | Task | Project | Database | task.project_id FK | ON DELETE SET NULL; Task can exist without Project |
+| CreateTask syncs stakeholders in same transaction | Command coupling | Task | Stakeholder | API | POST handler | task_stakeholders written in same transaction as task INSERT |
+| SoftDeleteProject refetches task list | Event coupling | Project | Task | Frontend | projects store deleteProject | Task list refetched after project soft-delete |
+```
+
+THIS IS THE ONLY ACCEPTABLE FORMAT. Do not use any other format.
+
+#### Column Rules
+
+- **Signal**: Short description of the coupling found.
+- **Type**: `Data coupling`, `Command coupling`, `Event coupling`, `Shared concept`, `Shared table`, `Dead module`, `Hub dependency`, `Circular dependency`.
+- **From**: PascalCase aggregate that initiates the coupling.
+- **To**: PascalCase aggregate that is coupled to. `—` if about a single aggregate.
+- **Source**: `Database`, `API`, `Frontend`, `Backend`, `Entity model`, `Configuration`, `Migration`.
+- **Location**: Descriptive location. NOT a file path.
+- **Detail**: How the coupling manifests. One or two sentences.
+
+### Phase 2 — Context Analysis
+
+File: `docs/flow/ddd/contexts.md`
+
+Read `contexts-extraction.md` and group aggregates into proposed bounded contexts. Map coupling between contexts and assess boundary quality.
+
+#### Format
+
+```markdown
+# Bounded Contexts
+
+## Task Management
+
+The core scheduling and execution context. Owns task lifecycle, time tracking, and hierarchical structure.
+
+**Aggregates:** Task, TimeBlock
+
+**Rationale:** Task and TimeBlock are tightly coupled through scheduling fields and share drag-and-drop interactions.
+
+| Signal | Type | Detail |
+|--------|------|--------|
+| Task references TimeBlock via FK | Data coupling | task.scheduled_time_block_id FK; ON DELETE SET NULL |
+
+**Internal boundary quality:** ✅ Clean — aggregates interact through well-defined scheduling fields
+
+---
+
+## Context Map
+
+### Project Organization ↔ Task Management
+
+| Direction | Signal | Type | Detail |
+|-----------|--------|------|--------|
+| Task Management → Project Organization | Task references Project via FK | Data coupling | task.project_id FK |
+
+**Boundary status:** ⚠️ Leaky boundary — Task writes project_id directly
+
+---
+
+## Summary
+
+### Proposed Contexts
+
+| Context | Aggregates | Internal Quality |
+|---------|-----------|-----------------|
+| Task Management | Task, TimeBlock | ✅ Clean |
+
+### Context Coupling
+
+| From | To | Coupling Count | Boundary Status |
+|------|----|---------------|-----------------|
+| Task Management | Project Organization | 3 | ⚠️ Leaky boundary |
+
+### Boundary Issues
+
+| Issue | Contexts | Detail |
+|-------|----------|--------|
+| Direct FK write | Task Management → Project Organization | Task writes project_id directly |
+```
+
+THIS IS THE ONLY ACCEPTABLE FORMAT. Do not use any other format.
+
+#### Context Section Rules
+
+Each context section must have exactly these parts:
+
+1. `## ContextName` — human-readable subdomain name
+2. One or two sentence description
+3. `**Aggregates:**` — comma-separated PascalCase aggregate names
+4. `**Rationale:**` — why these aggregates belong together
+5. Evidence table with columns `Signal | Type | Detail`
+6. `**Internal boundary quality:**` — one of the status values
+7. `---` separator
+
+#### Status Definitions
+
+- **✅ Clean boundary** — contexts interact only through well-defined interfaces
+- **⚠️ Leaky boundary** — contexts share transactions, write each other's fields, or have implicit knowledge
+- **⚠️ Missing boundary** — logically separate aggregates are tightly coupled with no separation
+- **❌ Circular dependency** — bidirectional command or data coupling
+
+---
+
 ## CLI Commands
 
 | Command | Purpose |
 |---------|---------|
-| `/ccf-flow-ddd-extract-all` | Full pipeline: UL → classify → entities → VOs → aggregates → rules → commands → events → xref verify |
-| `/ccf-flow-ddd-extract <concept>` | Re-extract a single concept: `ul`, `classification`, `entities`, `value-objects`, `aggregates`, `rules`, `commands`, `events` |
+| `/ccf-flow-ddd-extract-all` | Full pipeline: UL → classify → entities → VOs → aggregates → rules → commands → events → contexts → xref verify |
+| `/ccf-flow-ddd-extract <concept>` | Re-extract a single concept: `ul`, `classification`, `entities`, `value-objects`, `aggregates`, `rules`, `commands`, `events`, `contexts` |
 | `/ccf-flow-ddd-xref-verify` | Verify consistency across all DDD files after manual edits |
 
 ## Sub-Agents
@@ -895,6 +1014,9 @@ These are invoked automatically by the commands above. Users do not need to call
 | `ccf-flow-ddd-events-extractor` | Phase 1: produces events-extraction.md |
 | `ccf-flow-ddd-events-analyzer` | Phase 2: produces events.md |
 | `ccf-flow-ddd-events-verifier` | Checks events.md format |
+| `ccf-flow-ddd-contexts-extractor` | Phase 1: produces contexts-extraction.md |
+| `ccf-flow-ddd-contexts-analyzer` | Phase 2: produces contexts.md |
+| `ccf-flow-ddd-contexts-verifier` | Checks contexts.md format |
 | `ccf-flow-ddd-xref-verifier` | Cross-references all files for consistency |
 
 ## Verification
@@ -914,3 +1036,5 @@ See `references/ddd-commands-extraction-template.md` for command extraction spec
 See `references/ddd-commands-template.md` for domain commands specification.
 See `references/ddd-events-extraction-template.md` for event extraction specification.
 See `references/ddd-events-template.md` for domain events specification.
+See `references/ddd-contexts-extraction-template.md` for context extraction specification.
+See `references/ddd-contexts-template.md` for bounded contexts specification.
