@@ -1,5 +1,5 @@
 ---
-description: Run full DDD extraction - ubiquitous language, classification, entities, value objects, aggregates, business rules, domain commands, domain events, bounded contexts. Chains sub-agents sequentially.
+description: Run full DDD extraction - ubiquitous language, classification, entities, value objects, aggregates, business rules, domain commands, domain events, bounded contexts, domain services. Chains sub-agents sequentially.
 ---
 
 Run the following DDD extraction steps in order. For each step, use the named sub-agent. Wait for each sub-agent to complete before starting the next. Do not do the work yourself — delegate to the sub-agent.
@@ -46,6 +46,12 @@ Use the `ccf-flow-ddd-contexts-extractor` sub-agent to scan for coupling signals
 ## Step 14: Context Analysis (Phase 2)
 Use the `ccf-flow-ddd-contexts-analyzer` sub-agent to propose bounded contexts and produce `docs/flow/ddd/contexts.md`. It must read `contexts-extraction.md` and `classification.md` first.
 
+## Step 15: Service Extraction (Phase 1)
+Use the `ccf-flow-ddd-services-extractor` sub-agent to scan for cross-aggregate orchestration, coordination, computation, and policy logic. It must read ALL existing DDD files first. Write `docs/flow/ddd/services-extraction.md`.
+
+## Step 16: Service Analysis (Phase 2)
+Use the `ccf-flow-ddd-services-analyzer` sub-agent to group services by bounded context and assess encapsulation. It must read `services-extraction.md`, `contexts.md`, and `classification.md` first. Write `docs/flow/ddd/services.md`.
+
 ## After all steps
 
 Print a summary:
@@ -53,20 +59,22 @@ Print a summary:
 ```
 DDD Extraction Complete
 
-1. Ubiquitous Language: ✅/❌
-2. Classification:      ✅/❌
-3. Entities:            ✅/❌
-4. Value Objects:       ✅/❌
-5. Aggregates:          ✅/❌
-6. Cross-Reference:     ✅/❌
-7. Rule Extraction:     ✅/❌
-8. Rule Analysis:       ✅/❌
-9. Command Extraction:  ✅/❌
-10. Command Analysis:   ✅/❌
-11. Event Extraction:   ✅/❌
-12. Event Analysis:     ✅/❌
-13. Context Extraction: ✅/❌
-14. Context Analysis:   ✅/❌
+1.  Ubiquitous Language: ✅/❌
+2.  Classification:      ✅/❌
+3.  Entities:            ✅/❌
+4.  Value Objects:       ✅/❌
+5.  Aggregates:          ✅/❌
+6.  Cross-Reference:     ✅/❌
+7.  Rule Extraction:     ✅/❌
+8.  Rule Analysis:       ✅/❌
+9.  Command Extraction:  ✅/❌
+10. Command Analysis:    ✅/❌
+11. Event Extraction:    ✅/❌
+12. Event Analysis:      ✅/❌
+13. Context Extraction:  ✅/❌
+14. Context Analysis:    ✅/❌
+15. Service Extraction:  ✅/❌
+16. Service Analysis:    ✅/❌
 ```
 
 If any step fails, continue with the remaining steps. Note failures in the summary.

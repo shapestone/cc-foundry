@@ -29,6 +29,8 @@ docs/flow/ddd/
   events.md                 ← analyzed events with cascade detection (phase 2)
   contexts-extraction.md    ← raw coupling evidence between aggregates (phase 1)
   contexts.md               ← proposed bounded contexts with coupling map (phase 2)
+  services-extraction.md    ← raw cross-aggregate service evidence (phase 1)
+  services.md               ← analyzed services with encapsulation assessment (phase 2)
 ```
 
 When extracting or creating a specific file, produce ONLY that file. Do not add sections for other concept types. For example, when creating `entities.md`, do not add `## Value Objects` or `## Aggregates` sections — those belong in their own files.
@@ -982,12 +984,138 @@ Each context section must have exactly these parts:
 
 ---
 
-## CLI Commands
+## Domain Services
+
+Domain service extraction uses the same two-phase approach. Services capture stateless operations that orchestrate, coordinate, or compute across aggregate boundaries — logic that doesn't naturally belong to a single entity or value object.
+
+### Phase 1 — Service Extraction
+
+File: `docs/flow/ddd/services-extraction.md`
+
+Scan the codebase for multi-aggregate orchestration, transactional coordination, cross-aggregate computations, and business policy logic that spans aggregate boundaries.
+
+#### Format
+
+```markdown
+# Service Extraction
+
+| Service | Type | Aggregates | Source | Location | Detail |
+|---------|------|-----------|--------|----------|--------|
+| RebuildTimeBlocks | Orchestration | Task, TimeBlock | Frontend | TimeBlocks component rebuild | Clears overdue dates, computes capacity, distributes tasks across blocks on page load |
+| SyncStakeholders | Coordination | Task, Stakeholder | API | POST/PUT handler transaction | Delete-all then reinsert task_stakeholders in same transaction as Task write |
+| ComputeBlockCapacity | Computation | Task, TimeBlock | Frontend | TimeBlocks blockCapacity function | Counts active tasks per block against MaxLoad-scaled ceiling |
+```
+
+THIS IS THE ONLY ACCEPTABLE FORMAT. Do not use any other format.
+
+#### Column Rules
+
+- **Service**: PascalCase verb+noun name.
+- **Type**: `Orchestration`, `Coordination`, `Computation`, or `Policy`.
+- **Aggregates**: Comma-separated PascalCase aggregate names.
+- **Source**: `API`, `Frontend`, `Backend`, `Database`, or `Migration`.
+- **Location**: Descriptive location. NOT a file path.
+- **Detail**: What the service does. One or two sentences.
+
+#### Type Definitions
+
+- **Orchestration** — Multi-step coordination across aggregates with sequencing or conditional logic.
+- **Coordination** — Transactional consistency across aggregates (shared transactions, compensating actions).
+- **Computation** — Derived values spanning aggregate boundaries.
+- **Policy** — Business decision logic that doesn't belong to a single entity.
+
+### Phase 2 — Service Analysis
+
+File: `docs/flow/ddd/services.md`
+
+Read `services-extraction.md` and group services by owning bounded context from contexts.md. Assess encapsulation quality.
+
+#### Format
+
+```markdown
+# Services
+
+## TaskManagement
+
+### RebuildTimeBlocks
+
+Orchestrates the full TimeBlock display lifecycle.
+
+| Aggregates | Source | Location |
+|-----------|--------|----------|
+| Task, TimeBlock | Frontend | TimeBlocks component rebuild |
+
+**Type:** Orchestration
+**Owning context:** Task Management
+**Trigger:** Page load, task data change
+**Steps:** <ul><li>Identify overdue tasks</li><li>Clear or surface overdue tasks</li><li>Compute block capacity</li></ul>
+**Encapsulation:** ⚠️ Scattered — orchestration in Vue component
+
+**Status:** ⚠️ Scattered
+
+---
+
+## Cross-Context Services
+
+### FilterSystemProjects
+
+Applies Project context rules within Task Management UI.
+
+| Aggregates | Source | Location |
+|-----------|--------|----------|
+| Project, Task | Frontend | TaskCreateModal project dropdown |
+
+**Type:** Policy
+**Owning context:** Crosses Task Management → Work Organization
+**Trigger:** TaskCreateModal render
+**Steps:** <ul><li>Read projects</li><li>Filter where isSystem is false</li><li>Display in dropdown</li></ul>
+**Encapsulation:** ❌ Boundary violation
+
+**Status:** ❌ Boundary violation
+
+---
+
+## Summary
+
+### Service Inventory
+
+| Service | Type | Context | Aggregates | Status |
+|---------|------|---------|-----------|--------|
+
+### Encapsulation Issues
+
+| Service | Issue |
+|---------|-------|
+
+### Service Type Distribution
+
+| Type | Count |
+|------|-------|
+```
+
+THIS IS THE ONLY ACCEPTABLE FORMAT. Do not use any other format.
+
+#### Service Section Rules
+
+Each service section must have exactly these parts:
+
+1. `### ServiceName` — PascalCase verb+noun
+2. One sentence description
+3. Evidence table: `| Aggregates | Source | Location |`
+4. `**Type:**` — Orchestration, Coordination, Computation, or Policy
+5. `**Owning context:**` — context from contexts.md, or `Crosses A → B`
+6. `**Trigger:**` — what causes execution
+7. `**Steps:**` — algorithm, using `<ul><li>`
+8. `**Encapsulation:**` — status with explanation
+9. `**Status:**` — one of: `✅ Encapsulated`, `⚠️ Scattered`, `⚠️ Misplaced`, `❌ Boundary violation`
+10. `---` separator
+
+---
 
 | Command | Purpose |
 |---------|---------|
-| `/ccf-flow-ddd-extract-all` | Full pipeline: UL → classify → entities → VOs → aggregates → rules → commands → events → contexts → xref verify |
-| `/ccf-flow-ddd-extract <concept>` | Re-extract a single concept: `ul`, `classification`, `entities`, `value-objects`, `aggregates`, `rules`, `commands`, `events`, `contexts` |
+| `/ccf-flow-ddd-extract-all` | Full pipeline: UL → classify → entities → VOs → aggregates → rules → commands → events → contexts → services → xref verify |
+| `/ccf-flow-ddd-extract <concept>` | Re-extract a single concept: `ul`, `classification`, `entities`, `value-objects`, `aggregates`, `rules`, `commands`, `events`, `contexts`, `services` |
 | `/ccf-flow-ddd-xref-verify` | Verify consistency across all DDD files after manual edits |
 
 ## Sub-Agents
@@ -1017,6 +1145,9 @@ These are invoked automatically by the commands above. Users do not need to call
 | `ccf-flow-ddd-contexts-extractor` | Phase 1: produces contexts-extraction.md |
 | `ccf-flow-ddd-contexts-analyzer` | Phase 2: produces contexts.md |
 | `ccf-flow-ddd-contexts-verifier` | Checks contexts.md format |
+| `ccf-flow-ddd-services-extractor` | Phase 1: produces services-extraction.md |
+| `ccf-flow-ddd-services-analyzer` | Phase 2: produces services.md |
+| `ccf-flow-ddd-services-verifier` | Checks services.md format |
 | `ccf-flow-ddd-xref-verifier` | Cross-references all files for consistency |
 
 ## Verification
@@ -1038,3 +1169,5 @@ See `references/ddd-events-extraction-template.md` for event extraction specific
 See `references/ddd-events-template.md` for domain events specification.
 See `references/ddd-contexts-extraction-template.md` for context extraction specification.
 See `references/ddd-contexts-template.md` for bounded contexts specification.
+See `references/ddd-services-extraction-template.md` for service extraction specification.
+See `references/ddd-services-template.md` for domain services specification.
