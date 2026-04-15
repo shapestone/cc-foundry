@@ -1,14 +1,6 @@
 ---
 name: project-layout-go
-description: Standard Go project layout guidelines following community best practices. Use when creating or organizing Go projects to ensure proper structure, maintainability, and adherence to Go conventions.
-version: 4
-last_updated: 2026-02-02
-trigger_patterns:
-  - Creating a new Go/Golang project
-  - Organizing Go code structure
-  - Setting up Go application architecture
-  - Questions about Go project directories
-  - "where should I put" + Go code
+description: Use when creating, organizing, or reviewing a Go project's directory structure. Triggers on "Go project layout", "Golang project structure", "where to put Go code", "cmd/", "internal/", "pkg/", or any request about how to organize a Go repository. ALSO use when the user asks where main.go should live, whether to use pkg/ vs internal/, how to structure a Go monorepo, or what the community-standard Go project layout looks like. ALSO use when scaffolding a new Go project or reorganizing an existing one. Do NOT use for hexagonal/clean architecture layer decisions within a Go project (use hexagonal-architecture-go for that), or for build automation with make (use makefile for that).
 ---
 
 # Golang Project Layout Skill

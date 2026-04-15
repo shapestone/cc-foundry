@@ -1,6 +1,6 @@
 ---
 name: frontend-architecture-vue-typescript
-description: Guide LLMs in implementing feature-based frontend architecture using Vue 3, TypeScript, Pinia, and Vue Router. Covers component hierarchy, Pinia store patterns, API service layers, composables, routing, cross-feature communication, and LLM-friendly coding conventions for scalable single-page applications.
+description: Use when building, organizing, or reviewing a Vue 3 + TypeScript frontend. Triggers on "Vue", "Vue 3", "Pinia", "Vue Router", "composables", "SPA", or requests to structure a frontend application. Do NOT use for React, Angular, or non-Vue frontends, or for backend Go architecture (use hexagonal-architecture-go for that).
 ---
 
 # Frontend Architecture Skill - Vue 3 (TypeScript)

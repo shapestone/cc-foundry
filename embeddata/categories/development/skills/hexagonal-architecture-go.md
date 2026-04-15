@@ -1,6 +1,6 @@
 ---
-name: hexagonal-architecture
-description: Guide LLMs in implementing hexagonal architecture (Ports & Adapters) for backend applications using Go. Covers feature-based organization, domain/application/infrastructure/interfaces layers, dependency injection, ports and adapters patterns, cross-feature communication, and LLM-friendly coding conventions.
+name: hexagonal-architecture-go
+description: Use when implementing, organizing, or reviewing Go backend architecture using the hexagonal / Ports & Adapters / clean architecture pattern. Triggers on "hexagonal architecture", "ports and adapters", "clean architecture", "domain layer", "application layer", "infrastructure layer", "interfaces layer", or requests to structure a Go backend with strict dependency rules. ALSO use when the user asks how to organize Go features into vertical slices, where to put domain logic vs. infrastructure, how to wire up dependency injection in Go, or how to define ports (interfaces) vs. adapters (implementations). Do NOT use for non-Go backends, frontend architecture, or generic Go project layout questions (use project-layout-go for that).
 ---
 
 # Hexagonal Architecture Skill - Backend (Go)

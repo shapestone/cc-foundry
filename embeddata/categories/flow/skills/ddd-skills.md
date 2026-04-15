@@ -1,12 +1,6 @@
 ---
-name: ccf-flow-ddd-skills
-description: >
-  Use this skill for creating or verifying DDD documentation. Triggers include:
-  extracting domain terms from code, building a glossary, verifying glossary format,
-  extracting DDD documentation, or when the user mentions "ubiquitous language",
-  "domain terms", "glossary", "DDD", "domain model", "entities", "aggregates",
-  "value objects", or references docs/flow/ddd/.
----
+name: ddd-skills
+description: Use when creating, extracting, or verifying DDD documentation for a codebase. Triggers on "DDD", "domain-driven design", "ubiquitous language", "domain model", "entities", "value objects", "aggregates", "bounded contexts", "domain events", "domain commands", "business rules", "domain services", or references to docs/flow/ddd/. ALSO use when the user wants to extract domain terms, build a glossary, classify domain concepts, document aggregate boundaries, map bounded contexts, extract commands/events/rules/services from code, or verify that any DDD documentation file matches the expected format. ALSO use when the user says "extract all", "run DDD extraction", "verify glossary", "check entities", "check aggregates", or references any of the phase 1/phase 2 extraction workflow steps.---
 
 # DDD Documentation Skills
 

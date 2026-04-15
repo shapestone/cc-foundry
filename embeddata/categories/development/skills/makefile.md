@@ -1,6 +1,6 @@
 ---
-name: makefile-skills-guide
-description: Comprehensive guide for creating and managing Makefiles for build automation, full-stack projects, cross-platform compilation, and development workflows. Includes production-proven patterns for Go, npm, testing, and process management.
+name: makefile
+description: Use whenever the user needs a Makefile or help with `make` — creating, editing, debugging, or explaining one. Triggers on "Makefile", "make target", "make command", or any request to use make for build automation, orchestrating multi-language builds (Go + npm, Rust + frontend, monorepos), cross-platform / cross-compilation builds, or development workflows. ALSO use when the user wants make to handle process management, PID tracking, port management, port allocation, detecting stale PIDs, start/stop/restart/status targets, background servers or daemons, or graceful shutdown. ALSO use for make-driven testing workflows including unit tests, Playwright E2E tests, coverage reports, linting, and formatting targets, or for self-documenting help systems, version embedding from git, and dev vs production build flags. Do NOT use for pure npm/yarn projects with no Makefile, CI/CD YAML (GitHub Actions, Jenkins) unless make is invoked from them, generic shell scripting, or Dockerfiles unless make orchestrates them.
 ---
 
 # Makefile Skills Guide

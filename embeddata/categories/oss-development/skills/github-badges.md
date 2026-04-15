@@ -1,6 +1,6 @@
 ---
-name: github-badges-skill
-description: Expert guidance on selecting and implementing GitHub badges that build trust, credibility, and professionalism in open-source projects
+name: github-badges
+description: Use when the user wants to add, choose, or improve badges in a README or open source project. Triggers on "badges", "shields", "shields.io", "README badges", "build badge", "coverage badge", "license badge", or any request to display status indicators in a markdown file. ALSO use when the user asks which badges are worth adding, how to set up a CI status badge, how to show test coverage from Codecov or Coveralls, or how to display version/release badges from GitHub or pkg.go.dev. ALSO use when reviewing or auditing an existing README for missing or outdated badges. Do NOT use for setting up the CI pipelines that generate badges (use github-cicd for that), or for general README writing beyond badge selection.
 ---
 
 # GitHub Badges Skill
