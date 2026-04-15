@@ -1,6 +1,6 @@
 ---
 name: oss-project-setup
-description: Assesses open source projects (new or existing) and recommends appropriate documentation and structure based on project characteristics, complexity, and maturity. Takes a diagnostic-first approach to guide projects from minimal setup through mature governance.
+description: Use when setting up, auditing, or improving an open source project's documentation and structure. Triggers on "open source", "OSS", "README", "CONTRIBUTING", "CODE_OF_CONDUCT", "LICENSE", "open source project", or requests to make a repository public-ready. ALSO use when the user is starting a new open source project and needs to know what files to create; transitioning a private repo to open source; auditing an existing OSS project for missing documentation; or scaling up governance as a community grows. ALSO use when the user asks which documentation is required vs. optional for a project of a given maturity (experimental vs. alpha vs. production vs. mature). Do NOT use for CI/CD setup (use github-cicd for that), badge selection (use github-badges for that), or general project architecture questions.
 ---
 
 # Open Source Project Setup Skill

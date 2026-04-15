@@ -1,6 +1,6 @@
 ---
 name: github-cicd
-description: Comprehensive CI/CD pipeline setup and management for open source GitHub projects. Use this skill when Claude needs to: (1) Set up or configure GitHub Actions workflows, (2) Create CI/CD pipelines for testing, building, and deployment, (3) Configure automated checks for pull requests, (4) Set up release automation and semantic versioning, (5) Implement code quality checks (linting, formatting, security scanning), (6) Configure multi-platform builds and deployments, (7) Troubleshoot or debug existing CI/CD workflows, or (8) Optimize build performance and caching strategies
+description: Use when setting up, editing, or debugging GitHub Actions CI/CD workflows. Triggers on "GitHub Actions", "CI/CD", "workflow", ".github/workflows", "pipeline", "ci.yml", "release.yml", or any request to automate testing, building, or deploying via GitHub. ALSO use when the user wants to add automated PR checks, set up release automation, configure semantic versioning, add linting or security scanning to CI, configure multi-platform matrix builds, or optimize workflow caching and performance. ALSO use when troubleshooting a failing workflow, understanding GitHub Actions syntax, or deciding how to structure multiple workflow files. Do NOT use for non-GitHub CI systems (Jenkins, CircleCI, GitLab CI), for adding badges to a README (use github-badges for that), or for deployment infrastructure beyond what GitHub Actions orchestrates.
 ---
 
 # GitHub CI/CD Management Skill
